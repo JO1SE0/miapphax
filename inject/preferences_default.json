@@ -1,10 +1,11 @@
 {
-    "fps_unlock": true,
-    "low_latency": true,
-    "reduce_effects": true,
-    "transp_ui": false,
-    "chat_opacity": 0.8,
-    "notes": [],
+
+  "fps_unlock": false,
+  "low_latency": false,
+  "reduce_effects": false,
+  "chat_opacity": 0.8,
+  "notes": [],
+  "transp_ui": false,
     "shortcuts": [
         ["/e", "/extrapolation "],
         ["/a", "/avatar "]
