@@ -33,9 +33,6 @@ const validatePreferences = (prefs) => {
   });
 
   const PreferencesSchema = z.object({
-    low_latency: z.boolean().optional(),
-reduce_effects: z.boolean().optional(),
-chat_opacity: z.number().min(0).max(1).optional(),
       fps_unlock: z.boolean(),
       notes: z.array(z.object({
         title: z.string(),
@@ -66,27 +63,40 @@ const saveAppPreferences = (prefs) => {
   }
 }
 
+const loadAppPreferences = () => {
+  const userDataPath = app.getPath('userData')
+  const preferencesPath = path.join(userDataPath, 'preferences.json')
+  const preferencesDefaultPath = path.join(__dirname, 'inject', 'preferences_default.json')
+  try {
+    if (fs.existsSync(preferencesPath)) {
+      const fileContent = fs.readFileSync(preferencesPath, 'utf-8');
+      const data = JSON.parse(fileContent)
+      validatePreferences(data)
+      return data;
+    } else {
+      // File doesn't exist, return and save default settings
+      const fileContent = fs.readFileSync(preferencesDefaultPath, 'utf8')
+      const data = JSON.parse(fileContent)
+      validatePreferences(data)
+      saveAppPreferences(data)
+      return data;
+    }
+  } catch (error) {
+    console.error('Error loading preferences:', error);
+    app.quit();
+    return {};
+  }
+}
+
 const preferences = loadAppPreferences();
-
-const lowLatency = preferences.low_latency === true;
-
-if (preferences.fps_unlock || lowLatency) {
+if (preferences.fps_unlock) {
   app.commandLine.appendSwitch('disable-gpu-vsync');
-  app.commandLine.appendSwitch('ignore-gpu-blocklist');
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('disable-frame-rate-limit');
-
-  console.log("FPS unlocked");
+  console.log("FPS unlocked")
 }
-
-if (lowLatency) {
-  app.commandLine.appendSwitch('disable-renderer-backgrounding');
-  app.commandLine.appendSwitch('disable-background-timer-throttling');
-
-  console.log("Low Latency Mode enabled");
-}
-
 // app.commandLine.appendSwitch('disable-accelerated-2d-canvas');
 // app.commandLine.appendSwitch('enable-gpu-rasterization');
 // app.commandLine.appendSwitch('force-gpu-rasterization');
@@ -111,11 +121,10 @@ const createWindow = () => {
     kiosk: false,
     frame: true,
     webPreferences: {
-  contextIsolation: true,
-  preload: path.join(__dirname, 'preload.js'),
-  nodeIntegration: false,
-  backgroundThrottling: !lowLatency
-},
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false
+    },
     title: "HaxBall Client by og"
   });
   
