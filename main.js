@@ -90,6 +90,10 @@ const loadAppPreferences = () => {
 
 const preferences = loadAppPreferences();
 if (preferences.fps_unlock) {
+  app.commandLine.appendSwitch('disable-gpu-vsync');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('disable-frame-rate-limit');
   console.log("FPS unlocked")
 }
