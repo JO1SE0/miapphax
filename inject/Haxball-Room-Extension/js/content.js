@@ -4,39 +4,6 @@ var muteAllToggle = false;
 var autoJoinObserver;
 var refreshCycle;
 var myNick;
-var HAX_DEFAULT_CONFIG = {
-	haxTransChatConfig: false,
-	haxSearchConfig: true,
-	haxAutoJoinConfig: true,
-	haxShortcutConfig: false,
-	haxMuteConfig: true,
-	haxKickBanConfig: false,
-	haxNotifConfig: false,
-	haxRecordHotkey: false,
-	haxQuickLeaveConfig: false
-};
-
-var haxConfig = Object.assign({}, HAX_DEFAULT_CONFIG);
-
-// Load settings once instead of querying chrome.storage.local repeatedly.
-chrome.storage.local.get(HAX_DEFAULT_CONFIG, function(items) {
-	Object.assign(haxConfig, items);
-});
-
-// Keep the cache synchronized if an addon setting changes.
-chrome.storage.onChanged.addListener(function(changes, areaName) {
-	if (areaName !== "local") {
-		return;
-	}
-
-	Object.keys(changes).forEach(function(key) {
-		if (Object.prototype.hasOwnProperty.call(HAX_DEFAULT_CONFIG, key)) {
-			haxConfig[key] = changes[key].newValue === undefined
-				? HAX_DEFAULT_CONFIG[key]
-				: changes[key].newValue;
-		}
-	});
-});
 
 // for kick/ban buttons
 var dblDiv = document.createElement('div');
@@ -310,13 +277,9 @@ moduleObserver = new MutationObserver(function(mutations) {
 				// early exit
 				chrome.storage.local.get({'haxSearchConfig' : true, 'haxAutoJoinConfig' : true},
 				function (items) {
-					if (haxConfig.haxSearchConfig) {
-	createSearch();
-}
-
-if (haxConfig.haxAutoJoinConfig) {
-	createButton();
-}
+					if (items.haxSearchConfig) { createSearch(); }
+					if (items.haxAutoJoinConfig) { createButton(); }
+				});
 				
 				var gameframe = document.getElementsByClassName('gameframe')[0];
 				var changeNickBtn = gameframe.contentWindow.document.querySelector('[data-hook="changenick"]');
@@ -357,23 +320,22 @@ if (haxConfig.haxAutoJoinConfig) {
 				
 				chrome.storage.local.get({'haxTransChatConfig' : false},
 					function (items) {
-						if (haxConfig.haxTransChatConfig) {
-	bottomSec.removeAttribute('style');
-}
+						if (items.haxTransChatConfig) { 
+							bottomSec.removeAttribute('style');
+						}
+				});
 				
 				inGame = waitForElement('.bar-container');
 				inGame.then(function () {
 					toggleChatOpt();
 					toggleChatKb();
 					showTranslateDisclaimer();
-					if (haxConfig.haxTransChatConfig) {
-	if (chatLine.innerText.startsWith('Game start')) {
-		chatFormat(bottomSec, statSec, chatInput, 'absolute');
-	}
-	else if (chatLine.innerText.startsWith('Game stop')) {
-		bottomSec.removeAttribute('style');
-	}
-}
+					chrome.storage.local.get({'haxTransChatConfig' : false},
+					function (items) {
+						if (items.haxTransChatConfig) { 
+							chatFormat(bottomSec,statSec,chatInput,'absolute');
+						}
+					});
 				});
 				
 				settingsWait = waitForElement('[data-hook="settings"]');
@@ -441,7 +403,7 @@ if (haxConfig.haxAutoJoinConfig) {
 				// });
 				
 				chrome.storage.local.get({'haxShortcutConfig' : false}, function (items) {
-					if (haxConfig.haxShortcutConfig) {
+					if (items.haxShortcutConfig) {
 						var emojiDoc = document.createElement('button');
 						emojiDoc.style.padding = '5px 10px';
 						emojiDoc.innerText = '😊';
@@ -453,7 +415,7 @@ if (haxConfig.haxAutoJoinConfig) {
 				
 			case tempView == "dialog":
 				chrome.storage.local.get({'haxMuteConfig' : true}, function (items) {
-					if (haxConfig.haxMuteConfig) {
+					if (items.haxMuteConfig) {
 						var popupWait = waitForElement('div.dialog');
 						popupWait.then(function (popup) {
 							var name = popup.firstChild.innerText;
@@ -500,7 +462,7 @@ if (haxConfig.haxAutoJoinConfig) {
 									chatInput.focus();
 								}
 							}
-						}})
+						});}})
 				break;
 			case Boolean(tempView.match(/^(room-view|player-list-item|notice)/)):				
 				// early exit
@@ -564,9 +526,10 @@ if (haxConfig.haxAutoJoinConfig) {
 				
 				chrome.storage.local.get({'haxTransChatConfig' : false},
 					function (items) {
-						if (haxConfig.haxTransChatConfig) {
-	chatFormat(bottomSec, statSec, chatInput, 'absolute');
-}
+						if (items.haxTransChatConfig) { 
+							chatFormat(bottomSec,statSec,chatInput,'absolute');
+						}
+				});
 				
 				// toggle chat visibility
 				toggleChatOpt();
