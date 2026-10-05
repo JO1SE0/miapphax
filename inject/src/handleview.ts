@@ -22,7 +22,7 @@ export const handleGameView = (viewName: string): void => {
 				toggleHeaderVisibility();
 			}
 			window.electronAPI.updateDiscordRPC("Playing in a Room")
-			setTimeout(setGameView, 200); // improve, don't use timeout
+			setGameView();
 			break;
 		case viewName === "room-view":
 			if (localStorage.getItem("header_visible") === "true"){

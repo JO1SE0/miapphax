@@ -152,6 +152,20 @@ export const openSettingsAlert = async (): Promise<void> => {
 		}
 	);
 
+	const currentLowLatencySetting = prefs["low_latency"] === true
+	? "Enabled"
+	: "Disabled";
+
+const lowLatencyRow = createToggleRow(
+	'Low Latency',
+	['Disabled', 'Enabled'],
+	currentLowLatencySetting,
+	(selected) => {
+		const enabled = selected === "Enabled";
+		window.electronAPI.setAppPreference("low_latency", enabled);
+	}
+);
+
 	// because discord_rpc was introduced after 0.4.0
 	// here we just make sure that if preferences.json doesn't have discord_rpc
 	// then we consider it Enabled
@@ -169,11 +183,11 @@ export const openSettingsAlert = async (): Promise<void> => {
 		}
 	);
 
-	generalSection.appendChild(generalHeader);
-	generalSection.appendChild(generalNote);
-	generalSection.appendChild(fpsRow);
-	generalSection.appendChild(discordRPCRow);
-	generalSection.appendChild(createDivider());
+generalSection.appendChild(generalHeader);
+generalSection.appendChild(generalNote);
+generalSection.appendChild(fpsRow);
+generalSection.appendChild(lowLatencyRow);
+generalSection.appendChild(discordRPCRow);
 
 	// -- Shortcuts Section --
 	const shortcutsSection = document.createElement('div');
