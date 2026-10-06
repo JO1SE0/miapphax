@@ -11,6 +11,9 @@
 //     variables CSS (--hx-accent...).
 // Los valores originales se guardan, asi que apagar el tema los restaura.
 
+import { buildSkinCss } from "./ui-skin";
+import type { CardStyle } from "./ui-skin";
+
 export type Hsl = { h: number; s: number; l: number };
 
 export type ThemeConfig = {
@@ -19,6 +22,10 @@ export type ThemeConfig = {
 	glow: string; // color del brillo de fondo ("" = el mismo que el acento)
 	glowStrength: number; // 0 = sin brillo, 1 = muy fuerte
 	radius: number; // radio de esquinas en px
+	cards: boolean; // rediseño de tarjetas (lista de salas, host, dialogos)
+	cardStyle: CardStyle; // cristal / solido / plano
+	density: number; // 0.6 compacto ... 1.6 amplio
+	lowGpu: boolean; // sin blur (viene del modo baja latencia)
 };
 
 export const DEFAULT_THEME: ThemeConfig = {
@@ -27,6 +34,10 @@ export const DEFAULT_THEME: ThemeConfig = {
 	glow: "",
 	glowStrength: 0.35,
 	radius: 8,
+	cards: true,
+	cardStyle: "glass",
+	density: 1,
+	lowGpu: false,
 };
 
 export const PRESETS: { name: string; hex: string }[] = [
@@ -303,6 +314,13 @@ export const applyThemeToDocument = (doc: Document | null | undefined): void => 
 			{ radius: current.radius, glow: current.glow, glowStrength: current.glowStrength },
 			doc === document
 		);
+		if (current.cards) {
+			modern.textContent += buildSkinCss({
+				cardStyle: current.cardStyle,
+				density: current.density,
+				lowGpu: current.lowGpu,
+			});
+		}
 	}
 
 	// recolorear las hojas: todas si cambio el tema, solo las nuevas si no
@@ -356,6 +374,14 @@ export const startThemeWatcher = async (): Promise<void> => {
 			radius: Number.isFinite(Number(prefs?.theme_radius))
 				? clamp(Number(prefs.theme_radius), 0, 24)
 				: DEFAULT_THEME.radius,
+			cards: prefs?.theme_cards ?? DEFAULT_THEME.cards,
+			cardStyle: ["glass", "solid", "flat"].includes(prefs?.theme_card_style)
+				? prefs.theme_card_style
+				: DEFAULT_THEME.cardStyle,
+			density: Number.isFinite(Number(prefs?.theme_density))
+				? clamp(Number(prefs.theme_density), 0.5, 1.8)
+				: DEFAULT_THEME.density,
+			lowGpu: prefs?.low_latency === true,
 		};
 		// zoom de la interfaz (1 = 100%)
 		window.electronAPI.setZoom?.(Number(prefs?.ui_zoom) || 1);

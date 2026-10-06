@@ -5,6 +5,7 @@
 import { getLinesConfig, updateLinesLive } from "./lines";
 import { openSettingsAlert } from "./settings";
 import { PRESETS, getThemeConfig, isValidHex, updateThemeLive } from "./theme";
+import { copyToClipboard, dumpUiStructure } from "./uidump";
 
 const STYLE_ID = "hax-panel-style";
 const ROOT_ID = "hax-panel-root";
@@ -61,6 +62,9 @@ const CSS = `
 #${ROOT_ID} .hx-btn:hover { background: var(--hx-accent-hover, #5b9bf8); }
 #${ROOT_ID} .hx-btn.ghost { background: rgba(255,255,255,.08); }
 #${ROOT_ID} .hx-btn.ghost:hover { background: rgba(255,255,255,.14); }
+#${ROOT_ID} .hx-seg { display: flex; flex: 0 0 auto; padding: 2px; gap: 2px; border-radius: 10px; background: rgba(255,255,255,.06); }
+#${ROOT_ID} .hx-seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: #b7bfcc !important; background: transparent !important; border: none !important; cursor: pointer; }
+#${ROOT_ID} .hx-seg button.on { color: #fff !important; background: var(--hx-accent, #3b82f6) !important; }
 #${ROOT_ID} .hx-banner { margin-top: 16px; padding: 10px 12px; font-size: 12px; line-height: 1.4; border-radius: 8px; background: rgba(250,170,60,.12); border: 1px solid rgba(250,170,60,.35); color: #f5c27a; }
 #${ROOT_ID} .hx-banner .hx-btn { margin-top: 8px; width: 100%; }
 `;
@@ -188,6 +192,29 @@ const colorRow = (
 	return row;
 };
 
+const segRow = (
+	label: string,
+	options: { value: string; text: string }[],
+	value: string,
+	onChange: (v: string) => void,
+	hint?: string
+): HTMLDivElement => {
+	const row = el("div", "hx-row");
+	const seg = el("div", "hx-seg");
+	options.forEach((o) => {
+		const b = el("button", o.value === value ? "on" : "", o.text);
+		b.addEventListener("click", () => {
+			seg.querySelectorAll("button").forEach((x) => x.classList.remove("on"));
+			b.classList.add("on");
+			onChange(o.value);
+		});
+		seg.appendChild(b);
+	});
+	row.appendChild(labelBlock(label, hint));
+	row.appendChild(seg);
+	return row;
+};
+
 // ---- secciones ------------------------------------------------------------------
 
 let restartNeeded = false;
@@ -210,6 +237,24 @@ const buildLook = async (): Promise<HTMLElement> => {
 		updateThemeLive({ enabled: on });
 		SAVE("theme_enabled", on);
 	}));
+
+	box.appendChild(switchRow("Interfaz de tarjetas", "Rediseno de la lista de salas, la sala del host y los menus", t.cards, (on) => {
+		updateThemeLive({ cards: on });
+		SAVE("theme_cards", on);
+	}));
+	box.appendChild(segRow("Estilo de tarjeta", [
+		{ value: "glass", text: "Cristal" },
+		{ value: "solid", text: "Solido" },
+		{ value: "flat", text: "Plano" },
+	], t.cardStyle, (v) => {
+		updateThemeLive({ cardStyle: v as any });
+		SAVE("theme_card_style", v);
+	}, "Cristal usa desenfoque; se apaga solo con baja latencia"));
+	box.appendChild(sliderRow("Densidad", t.density, 0.6, 1.6, 0.1,
+		(v) => (v < 0.85 ? "Compacta" : v > 1.25 ? "Amplia" : "Normal"),
+		(v) => updateThemeLive({ density: v }),
+		(v) => SAVE("theme_density", v),
+		"Espacio entre filas y bloques"));
 
 	box.appendChild(group("Colores"));
 	box.appendChild(colorRow("Color de acento", t.accent,
@@ -313,7 +358,16 @@ const buildSettings = async (): Promise<HTMLElement> => {
 	open.style.width = "100%";
 	open.addEventListener("click", () => { closeDrawer(); openSettingsAlert(); });
 	box.appendChild(open);
-	box.appendChild(el("p", "hx-sub", "")).style.marginTop = "14px";
+	box.appendChild(group("Depuracion"));
+	const dump = el("button", "hx-btn ghost", "Copiar estructura de la UI");
+	dump.style.width = "100%";
+	dump.addEventListener("click", async () => {
+		const ok = await copyToClipboard(dumpUiStructure());
+		dump.textContent = ok ? "Copiado! Pegalo en el chat" : "No se pudo copiar";
+		setTimeout(() => (dump.textContent = "Copiar estructura de la UI"), 2500);
+	});
+	box.appendChild(dump);
+	box.appendChild(el("p", "hx-sub", "Copia un resumen de las clases y botones que hay en pantalla (sin chat ni datos tuyos). Abri la pantalla que quieras ajustar y tocalo.")).style.marginTop = "8px";
 	box.appendChild(el("p", "hx-sub", "Atajos: F8 lineas finas · F9 mostrar/ocultar esta barra"));
 	return box;
 };
