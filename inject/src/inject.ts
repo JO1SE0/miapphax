@@ -3,6 +3,7 @@ import { waitForElement } from "./waitForElement";
 import { setupUIElements } from "./ui/setupUIElements"
 import { handleGameView } from "./handleview";
 import { exportCurrentProfile, loadProfileToLocalStorage, Profile } from "./profiles";
+import { startLinesWatcher } from "./lines";
 
 async function init() {    
     // remove ads, modify header, add command bar
@@ -39,6 +40,9 @@ async function init() {
 
     // finally show window to user
     window.electronAPI.notifyReadyToShow();
+
+    // grosor configurable de lineas (cancha / pelota / jugadores)
+    startLinesWatcher();
 
     try {
         const targetElement = await waitForElement("div[class$='view']");

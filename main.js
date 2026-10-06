@@ -133,6 +133,16 @@ const createWindow = () => {
 
   win.loadURL('https://www.haxball.com/play');
 
+  // F8: prender/apagar lineas finas (lo maneja inject/src/lines.ts)
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'F8' && !input.isAutoRepeat) {
+      event.preventDefault();
+      win.webContents
+        .executeJavaScript('window.__haxToggleLines && window.__haxToggleLines()')
+        .catch(() => {});
+    }
+  });
+
   win.webContents.on('did-finish-load', () => {
     const injectJS = fs.readFileSync(path.join(__dirname, 'inject', 'inject.js'), 'utf8');
     // const injectCSS = fs.readFileSync(path.join(__dirname, 'inject', 'inject.css'), 'utf8');
@@ -357,20 +367,3 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-
-const electronTest = require('electron');
-
-electronTest.app.whenReady().then(() => {
-  console.log("=== F8 TEST LOADED ===");
-
-  electronTest.globalShortcut.register('F8', () => {
-    console.log("=== F8 PRESSED ===");
-
-    electronTest.dialog.showMessageBox({
-      type: 'info',
-      title: 'F8 FUNCIONA',
-      message: 'Electron recibió F8 correctamente.'
-    });
-  });
-});
-

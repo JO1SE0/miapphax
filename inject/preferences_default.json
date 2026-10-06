@@ -1,27 +1,29 @@
 {
-
-"fps_unlock": false,
-"low_latency": false,
-"reduce_effects": false,
-"graphics_line_width": 1,
-"chat_opacity": 0.8,
-  "notes": [],
-  "transp_ui": false,
-    "shortcuts": [
-        ["/e", "/extrapolation "],
-        ["/a", "/avatar "]
-    ],
-    "profiles": [
-        {
-            "id": "default",
-            "name": "Default",
-            "autosave": true,
-            "avatar": null,
-            "extrapolation": null,
-            "fav_rooms": [],
-            "geo_override": null,
-            "player_auth_key": null,
-            "player_name": null
-        }
-    ]
+	"fps_unlock": false,
+	"low_latency": false,
+	"reduce_effects": false,
+	"lines_enabled": true,
+	"line_width_field": 1.5,
+	"line_width_ball": 1,
+	"line_width_players": 1,
+	"chat_opacity": 0.8,
+	"notes": [],
+	"transp_ui": false,
+	"shortcuts": [
+		["/e", "/extrapolation "],
+		["/a", "/avatar "]
+	],
+	"profiles": [
+		{
+			"id": "default",
+			"name": "Default",
+			"autosave": true,
+			"avatar": null,
+			"extrapolation": null,
+			"fav_rooms": [],
+			"geo_override": null,
+			"player_auth_key": null,
+			"player_name": null
+		}
+	]
 }

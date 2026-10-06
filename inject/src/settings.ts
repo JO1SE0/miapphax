@@ -3,6 +3,7 @@ import { authNewDialog, authShowAlert, resetAuthAlert } from "./auth";
 import { loadProfileToLocalStorage } from "./profiles";
 import { shortcutListDialog, shortcutNewDialog } from "./shortcuts";
 import { createButton } from "./utils";
+import { getLinesConfig, ORIGINAL_WIDTHS, updateLinesLive } from "./lines";
 
 const createToggleRow = (
 		labelText: string,
@@ -92,6 +93,53 @@ const createDivider = (): HTMLHRElement => {
 	divider.style.borderTop = '1px solid #444';
 	divider.style.margin = '20px 0';
 	return divider;
+};
+
+// Fila con slider: onLive se llama mientras arrastras, onCommit al soltar.
+const createSliderRow = (
+		labelText: string,
+		value: number,
+		min: number,
+		max: number,
+		step: number,
+		onLive: (value: number) => void,
+		onCommit: (value: number) => void
+	): HTMLDivElement => {
+		const row = document.createElement('div');
+		row.style.display = 'flex';
+		row.style.alignItems = 'center';
+		row.style.marginBottom = '15px';
+		row.style.gap = '12px';
+
+		const label = document.createElement('label');
+		label.textContent = labelText;
+		label.style.flex = '0 0 180px';
+		label.style.fontWeight = 'bold';
+
+		const slider = document.createElement('input');
+		slider.type = 'range';
+		slider.min = String(min);
+		slider.max = String(max);
+		slider.step = String(step);
+		slider.value = String(value);
+		slider.style.flex = '1';
+
+		const readout = document.createElement('span');
+		readout.textContent = value.toFixed(1);
+		readout.style.flex = '0 0 36px';
+		readout.style.textAlign = 'right';
+
+		slider.addEventListener('input', () => {
+			const v = Number(slider.value);
+			readout.textContent = v.toFixed(1);
+			onLive(v);
+		});
+		slider.addEventListener('change', () => onCommit(Number(slider.value)));
+
+		row.appendChild(label);
+		row.appendChild(slider);
+		row.appendChild(readout);
+		return row;
 };
 
 export const resetPreferencesAlert = (): void => {
@@ -331,9 +379,79 @@ generalSection.appendChild(discordRPCRow);
 	backupSection.appendChild(backupMessage);
 	backupSection.appendChild(backupActionRow);
 
+	// -- Graphics Section (grosor de lineas) --
+	const graphicsSection = document.createElement('div');
+
+	const graphicsHeader = document.createElement('div');
+	graphicsHeader.textContent = "Graphics";
+	graphicsHeader.style.fontSize = '18px';
+	graphicsHeader.style.fontWeight = 'bold';
+	graphicsHeader.style.marginBottom = '10px';
+
+	const graphicsNote = document.createElement('div');
+	graphicsNote.textContent = "Line thickness. Applies instantly (enter a room to see it). 0 hides the line. F8 toggles thin lines on/off. Original values: field 3, ball 2, players 2.";
+	graphicsNote.style.fontSize = '13px';
+	graphicsNote.style.marginBottom = '15px';
+	graphicsNote.style.lineHeight = '1.4';
+	graphicsNote.style.color = '#ccc';
+
+	const lines = getLinesConfig();
+
+	const linesToggleRow = createToggleRow(
+		'Thin lines',
+		['Original', 'Custom'],
+		lines.enabled ? 'Custom' : 'Original',
+		(selected) => {
+			const enabled = selected === 'Custom';
+			updateLinesLive({ enabled });
+			window.electronAPI.setAppPreference("lines_enabled", enabled);
+		}
+	);
+
+	const sliderFor = (
+		labelText: string,
+		key: 'field' | 'ball' | 'players',
+		prefKey: string
+	) => createSliderRow(
+		labelText,
+		lines[key],
+		0, 6, 0.1,
+		(v) => updateLinesLive({ [key]: v }),
+		(v) => window.electronAPI.setAppPreference(prefKey, v)
+	);
+
+	const fieldRow = sliderFor('Field lines', 'field', 'line_width_field');
+	const ballRow = sliderFor('Ball & objects', 'ball', 'line_width_ball');
+	const playersRow = sliderFor('Players', 'players', 'line_width_players');
+
+	const resetLinesButton = createButton("Reset line widths", "#244967", "#3b5d82", () => {
+		updateLinesLive({ ...ORIGINAL_WIDTHS });
+		window.electronAPI.setAppPreference("line_width_field", ORIGINAL_WIDTHS.field);
+		window.electronAPI.setAppPreference("line_width_ball", ORIGINAL_WIDTHS.ball);
+		window.electronAPI.setAppPreference("line_width_players", ORIGINAL_WIDTHS.players);
+		// llevar los sliders a los valores originales
+		([[fieldRow, 'field'], [ballRow, 'ball'], [playersRow, 'players']] as const).forEach(([row, key]) => {
+			const slider = row.querySelector('input') as HTMLInputElement;
+			const readout = row.querySelector('span') as HTMLSpanElement;
+			slider.value = String(ORIGINAL_WIDTHS[key]);
+			readout.textContent = ORIGINAL_WIDTHS[key].toFixed(1);
+		});
+	});
+
+	graphicsSection.appendChild(graphicsHeader);
+	graphicsSection.appendChild(graphicsNote);
+	graphicsSection.appendChild(linesToggleRow);
+	graphicsSection.appendChild(fieldRow);
+	graphicsSection.appendChild(ballRow);
+	graphicsSection.appendChild(playersRow);
+	graphicsSection.appendChild(resetLinesButton);
+
 	// -- Combine All Sections --
 	const container = document.createElement('div');
 	container.appendChild(generalSection);
+	container.appendChild(createDivider());
+	container.appendChild(graphicsSection);
+	container.appendChild(createDivider());
 	container.appendChild(shortcutsSection);
 	container.appendChild(authSection);
 	container.appendChild(backupSection);
