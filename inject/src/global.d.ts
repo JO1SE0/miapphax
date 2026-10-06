@@ -13,6 +13,7 @@ declare global {
 			getAppVersion: () => Promise<string>;
 			generatePlayerAuthKey: () => Promise<string>;
 			updateDiscordRPC: (details: string) => void;
+			setZoom: (factor: number) => void;
 		};
 	}
 };

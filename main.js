@@ -124,6 +124,34 @@ if (preferences.low_latency) {
   console.log("Low latency flags enabled")
 }
 
+// Laptops con dos placas de video: fuerza la GPU dedicada en vez de la integrada.
+if (preferences.force_gpu) {
+  app.commandLine.appendSwitch('force_high_performance_gpu');
+}
+
+// EXPERIMENTAL: el proceso de GPU corre dentro del proceso principal. Ahorra
+// comunicacion entre procesos (puede bajar algo la latencia) pero si la GPU
+// se cuelga se cae toda la app. Apagado por defecto.
+if (preferences.in_process_gpu) {
+  app.commandLine.appendSwitch('in-process-gpu');
+}
+
+// Prioridad alta de CPU para la app y sus procesos (ayuda cuando la PC esta
+// cargada). No necesita permisos de administrador; si el sistema no lo permite
+// simplemente se ignora.
+const boostPriority = () => {
+  if (!preferences.high_priority) return;
+  const os = require('os');
+  const high = os.constants.priority.PRIORITY_HIGH;
+  const pids = new Set([process.pid]);
+  try {
+    app.getAppMetrics().forEach((m) => pids.add(m.pid));
+  } catch (e) {}
+  pids.forEach((pid) => {
+    try { os.setPriority(pid, high); } catch (e) {}
+  });
+};
+
 
 const createWindow = () => {
   const display = screen.getPrimaryDisplay();
@@ -152,20 +180,30 @@ const createWindow = () => {
     title: "HaxBall Client by og"
   });
   
-  const extensionPath = path.join(__dirname, 'inject', 'Haxball-Room-Extension');
-  win.webContents.session.loadExtension(extensionPath);
+  // La extension "All-in-one Tool" mete scripts en la pagina; se puede apagar
+  // desde el panel (Rendim.) para ahorrar CPU, a costa de sus funciones.
+  if (!preferences.disable_extension) {
+    const extensionPath = path.join(__dirname, 'inject', 'Haxball-Room-Extension');
+    win.webContents.session.loadExtension(extensionPath);
+  }
 
   win.loadURL('https://www.haxball.com/play');
 
-  // F8: prender/apagar lineas finas (lo maneja inject/src/lines.ts)
+  // Atajos: F8 = lineas finas on/off, F9 = mostrar/ocultar el panel lateral
+  const hotkeys = {
+    F8: 'window.__haxToggleLines && window.__haxToggleLines()',
+    F9: 'window.__haxTogglePanel && window.__haxTogglePanel()'
+  };
   win.webContents.on('before-input-event', (event, input) => {
-    if (input.type === 'keyDown' && input.key === 'F8' && !input.isAutoRepeat) {
+    const code = hotkeys[input.key];
+    if (code && input.type === 'keyDown' && !input.isAutoRepeat) {
       event.preventDefault();
-      win.webContents
-        .executeJavaScript('window.__haxToggleLines && window.__haxToggleLines()')
-        .catch(() => {});
+      win.webContents.executeJavaScript(code).catch(() => {});
     }
   });
+
+  win.webContents.on('did-finish-load', boostPriority);
+  setInterval(boostPriority, 30000);
 
   win.webContents.on('did-finish-load', () => {
     const injectJS = fs.readFileSync(path.join(__dirname, 'inject', 'inject.js'), 'utf8');

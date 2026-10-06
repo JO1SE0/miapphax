@@ -13,9 +13,21 @@
 
 export type Hsl = { h: number; s: number; l: number };
 
-export type ThemeConfig = { enabled: boolean; accent: string };
+export type ThemeConfig = {
+	enabled: boolean;
+	accent: string;
+	glow: string; // color del brillo de fondo ("" = el mismo que el acento)
+	glowStrength: number; // 0 = sin brillo, 1 = muy fuerte
+	radius: number; // radio de esquinas en px
+};
 
-export const DEFAULT_THEME: ThemeConfig = { enabled: true, accent: "#3b82f6" };
+export const DEFAULT_THEME: ThemeConfig = {
+	enabled: true,
+	accent: "#3b82f6",
+	glow: "",
+	glowStrength: 0.35,
+	radius: 8,
+};
 
 export const PRESETS: { name: string; hex: string }[] = [
 	{ name: "Blue", hex: "#3b82f6" },
@@ -152,28 +164,50 @@ export const accentToHsl = (hex: string): Hsl => {
 	return rgbToHsl(r, g, b);
 };
 
-// Variables CSS derivadas del acento.
-export const buildModernCss = (hex: string): string => {
+// CSS de la capa moderna. `top` = pagina principal (lleva el brillo de fondo);
+// el iframe del juego no lo lleva.
+export const buildModernCss = (
+	hex: string,
+	opts: { radius?: number; glow?: string; glowStrength?: number } = {},
+	top: boolean = false
+): string => {
 	const safe = isValidHex(hex) ? hex : DEFAULT_THEME.accent;
 	const a = accentToHsl(safe);
 	const base = Math.min(a.l, 0.55);
 	const main = toHex(hslToRgb({ h: a.h, s: Math.min(a.s, MAX_SAT), l: base }));
 	const hover = toHex(hslToRgb({ h: a.h, s: Math.min(a.s, MAX_SAT), l: clamp(base + 0.08, 0, 0.85) }));
 	const [mr, mg, mb] = hexToRgb(main);
+	const radius = clamp(Number.isFinite(opts.radius as number) ? (opts.radius as number) : DEFAULT_THEME.radius, 0, 24);
+
+	const strength = clamp(Number.isFinite(opts.glowStrength as number) ? (opts.glowStrength as number) : DEFAULT_THEME.glowStrength, 0, 1);
+	const [gr, gg, gb] = opts.glow && isValidHex(opts.glow) ? hexToRgb(opts.glow) : [mr, mg, mb];
+	const glowCss = top && strength > 0 ? `
+html::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(60% 55% at 10% 18%, rgba(${gr}, ${gg}, ${gb}, ${(strength * 0.55).toFixed(3)}) 0%, transparent 70%),
+		radial-gradient(50% 50% at 92% 90%, rgba(${gr}, ${gg}, ${gb}, ${(strength * 0.4).toFixed(3)}) 0%, transparent 70%);
+}` : "";
+
 	return `
 :root {
 	--hx-accent: ${main};
 	--hx-accent-hover: ${hover};
 	--hx-accent-soft: rgba(${mr}, ${mg}, ${mb}, 0.35);
+	--hx-radius: ${radius}px;
 }
 button {
-	border-radius: 8px !important;
+	border-radius: var(--hx-radius) !important;
 	transition: background-color .15s ease, transform .05s ease, box-shadow .15s ease;
 }
 button:active { transform: translateY(1px); }
 button:focus-visible { outline: 2px solid var(--hx-accent) !important; outline-offset: 1px; }
 input[type=text], input[type=password], input[type=search], input:not([type]), select, textarea {
-	border-radius: 8px !important;
+	border-radius: var(--hx-radius) !important;
 	transition: border-color .15s ease, box-shadow .15s ease;
 }
 input[type=text]:focus, input[type=password]:focus, input[type=search]:focus,
@@ -183,12 +217,13 @@ input:not([type]):focus, select:focus, textarea:focus {
 	box-shadow: 0 0 0 2px var(--hx-accent-soft) !important;
 }
 input[type=range] { accent-color: var(--hx-accent); }
-.dialog, dialog { border-radius: 12px; }
+.dialog, dialog { border-radius: calc(var(--hx-radius) + 4px); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--hx-accent); }
 ::selection { background: var(--hx-accent-soft); }
+${glowCss}
 `;
 };
 
@@ -231,7 +266,8 @@ const rewriteDeclaration = (style: CSSStyleDeclaration, accent: Hsl | null): voi
 };
 
 const rewriteSheet = (sheet: CSSStyleSheet, accent: Hsl | null): void => {
-	if ((sheet.ownerNode as HTMLElement | null)?.id === MODERN_STYLE_ID) return;
+	// no tocar las hojas propias del cliente (capa moderna, panel lateral)
+	if (((sheet.ownerNode as HTMLElement | null)?.id || "").startsWith("hax-")) return;
 	let rules: CSSRuleList;
 	try {
 		rules = sheet.cssRules; // lanza error si la hoja es de otro origen
@@ -262,7 +298,11 @@ export const applyThemeToDocument = (doc: Document | null | undefined): void => 
 			modern.id = MODERN_STYLE_ID;
 			doc.head.appendChild(modern);
 		}
-		modern.textContent = buildModernCss(current.accent);
+		modern.textContent = buildModernCss(
+			current.accent,
+			{ radius: current.radius, glow: current.glow, glowStrength: current.glowStrength },
+			doc === document
+		);
 	}
 
 	// recolorear las hojas: todas si cambio el tema, solo las nuevas si no
@@ -309,7 +349,16 @@ export const startThemeWatcher = async (): Promise<void> => {
 		current = {
 			enabled: prefs?.theme_enabled ?? DEFAULT_THEME.enabled,
 			accent: isValidHex(prefs?.theme_accent) ? prefs.theme_accent : DEFAULT_THEME.accent,
+			glow: isValidHex(prefs?.theme_glow) ? prefs.theme_glow : "",
+			glowStrength: Number.isFinite(Number(prefs?.theme_glow_strength))
+				? clamp(Number(prefs.theme_glow_strength), 0, 1)
+				: DEFAULT_THEME.glowStrength,
+			radius: Number.isFinite(Number(prefs?.theme_radius))
+				? clamp(Number(prefs.theme_radius), 0, 24)
+				: DEFAULT_THEME.radius,
 		};
+		// zoom de la interfaz (1 = 100%)
+		window.electronAPI.setZoom?.(Number(prefs?.ui_zoom) || 1);
 	} catch (error) {
 		console.error("[theme] no se pudieron leer las preferencias", error);
 	}
