@@ -3,6 +3,7 @@ import { authNewDialog, authShowAlert, resetAuthAlert } from "./auth";
 import { loadProfileToLocalStorage } from "./profiles";
 import { shortcutListDialog, shortcutNewDialog } from "./shortcuts";
 import { createButton } from "./utils";
+import { PRESETS, getThemeConfig, isValidHex, themed, updateThemeLive } from "./theme";
 import { getLinesConfig, ORIGINAL_WIDTHS, updateLinesLive } from "./lines";
 
 const createToggleRow = (
@@ -47,7 +48,7 @@ const createToggleRow = (
 			btn.style.color = '#aaa';
 
 			const setActive = (isActive: boolean) => {
-				btn.style.backgroundColor = isActive ? '#244967' : '#1b2125';
+				btn.style.backgroundColor = isActive ? themed('#244967') : '#1b2125';
 				btn.style.color = isActive ? 'white' : '#aaa';
 				btn.dataset.active = isActive ? 'true' : 'false';
 			};
@@ -55,7 +56,7 @@ const createToggleRow = (
 			btn.addEventListener('click', () => {
 				Object.entries(buttonsMap).forEach(([opt, b]) => {
 					const active = opt === option;
-					b.style.backgroundColor = active ? '#244967' : '#1b2125';
+					b.style.backgroundColor = active ? themed('#244967') : '#1b2125';
 					b.style.color = active ? 'white' : '#aaa';
 					b.dataset.active = active ? 'true' : 'false';
 				});
@@ -66,14 +67,14 @@ const createToggleRow = (
 				if (btn.dataset.active !== 'true'){
 					btn.style.color = 'white';
 				} else {
-					btn.style.backgroundColor = '#3b5d82';
+					btn.style.backgroundColor = themed('#3b5d82');
 				}
 			});
 			btn.addEventListener('mouseleave', () => {
 				if (btn.dataset.active !== 'true'){
 					btn.style.color = '#aaa';
 				} else {
-					btn.style.backgroundColor = '#244967';
+					btn.style.backgroundColor = themed('#244967');
 				}
 			});
 
@@ -446,9 +447,114 @@ generalSection.appendChild(discordRPCRow);
 	graphicsSection.appendChild(playersRow);
 	graphicsSection.appendChild(resetLinesButton);
 
+	// -- Theme Section (tema moderno + color de acento) --
+	const themeSection = document.createElement('div');
+
+	const themeHeader = document.createElement('div');
+	themeHeader.textContent = "Theme";
+	themeHeader.style.fontSize = '18px';
+	themeHeader.style.fontWeight = 'bold';
+	themeHeader.style.marginBottom = '10px';
+
+	const themeNote = document.createElement('div');
+	themeNote.textContent = "Pick the accent color of the interface. Changes apply instantly. Original brings back the stock look.";
+	themeNote.style.fontSize = '13px';
+	themeNote.style.marginBottom = '15px';
+	themeNote.style.lineHeight = '1.4';
+	themeNote.style.color = '#ccc';
+
+	const theme = getThemeConfig();
+
+	const themeToggleRow = createToggleRow(
+		'Style',
+		['Original', 'Modern'],
+		theme.enabled ? 'Modern' : 'Original',
+		(selected) => {
+			const enabled = selected === 'Modern';
+			updateThemeLive({ enabled });
+			window.electronAPI.setAppPreference("theme_enabled", enabled);
+		}
+	);
+
+	// selector de color: muestras + color libre
+	const colorRow = document.createElement('div');
+	colorRow.style.display = 'flex';
+	colorRow.style.alignItems = 'center';
+	colorRow.style.flexWrap = 'wrap';
+	colorRow.style.gap = '10px';
+	colorRow.style.marginBottom = '10px';
+
+	const colorLabel = document.createElement('label');
+	colorLabel.textContent = 'Accent color';
+	colorLabel.style.flex = '0 0 180px';
+	colorLabel.style.fontWeight = 'bold';
+
+	const swatches = document.createElement('div');
+	swatches.style.display = 'flex';
+	swatches.style.alignItems = 'center';
+	swatches.style.gap = '8px';
+	swatches.style.flexWrap = 'wrap';
+
+	const customPicker = document.createElement('input');
+	customPicker.type = 'color';
+	customPicker.value = isValidHex(theme.accent) && theme.accent.length === 7 ? theme.accent : '#3b82f6';
+	customPicker.title = 'Custom color';
+	customPicker.style.width = '34px';
+	customPicker.style.height = '28px';
+	customPicker.style.padding = '0';
+	customPicker.style.border = 'none';
+	customPicker.style.background = 'none';
+	customPicker.style.cursor = 'pointer';
+
+	const swatchButtons: HTMLButtonElement[] = [];
+	const markSelected = (hex: string) => {
+		swatchButtons.forEach((b) => {
+			const on = b.dataset.hex?.toLowerCase() === hex.toLowerCase();
+			b.style.outline = on ? '2px solid #fff' : '2px solid transparent';
+		});
+	};
+
+	const chooseAccent = (hex: string, persist: boolean) => {
+		updateThemeLive({ accent: hex, enabled: true });
+		markSelected(hex);
+		if (persist) {
+			window.electronAPI.setAppPreference("theme_accent", hex);
+			window.electronAPI.setAppPreference("theme_enabled", true);
+		}
+	};
+
+	PRESETS.forEach((preset) => {
+		const b = document.createElement('button');
+		b.title = preset.name;
+		b.dataset.hex = preset.hex;
+		// estilos inline a proposito: no deben ser recoloreados por el tema
+		b.style.cssText = `width:28px;height:28px;border-radius:50% !important;border:none;padding:0;cursor:pointer;background:${preset.hex} !important;outline:2px solid transparent;outline-offset:2px;`;
+		b.addEventListener('click', () => {
+			customPicker.value = preset.hex;
+			chooseAccent(preset.hex, true);
+		});
+		swatchButtons.push(b);
+		swatches.appendChild(b);
+	});
+
+	customPicker.addEventListener('input', () => chooseAccent(customPicker.value, false));
+	customPicker.addEventListener('change', () => chooseAccent(customPicker.value, true));
+	swatches.appendChild(customPicker);
+	markSelected(theme.accent);
+
+	colorRow.appendChild(colorLabel);
+	colorRow.appendChild(swatches);
+
+	themeSection.appendChild(themeHeader);
+	themeSection.appendChild(themeNote);
+	themeSection.appendChild(themeToggleRow);
+	themeSection.appendChild(colorRow);
+
 	// -- Combine All Sections --
 	const container = document.createElement('div');
 	container.appendChild(generalSection);
+	container.appendChild(createDivider());
+	container.appendChild(themeSection);
 	container.appendChild(createDivider());
 	container.appendChild(graphicsSection);
 	container.appendChild(createDivider());

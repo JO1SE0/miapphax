@@ -89,17 +89,40 @@ const loadAppPreferences = () => {
 }
 
 const preferences = loadAppPreferences();
+// --- Rendimiento / latencia -------------------------------------------------
+// Todas son flags estandar de Chromium. Se leen una sola vez al arrancar, por
+// eso hay que reiniciar la app despues de cambiar estas opciones en Settings.
+//
+// FPS ilimitado: sin vsync ni limite de cuadros (puede verse algo de tearing).
 if (preferences.fps_unlock) {
   app.commandLine.appendSwitch('disable-gpu-vsync');
-app.commandLine.appendSwitch('ignore-gpu-blocklist');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('disable-frame-rate-limit');
+  // (estas tres ya estaban aca antes; se repiten en low_latency y no molesta)
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
   console.log("FPS unlocked")
 }
-// app.commandLine.appendSwitch('disable-accelerated-2d-canvas');
-// app.commandLine.appendSwitch('enable-gpu-rasterization');
-// app.commandLine.appendSwitch('force-gpu-rasterization');
+
+// Modo baja latencia (Settings > Low Latency): evita que Chromium baje la
+// prioridad del juego y usa mejor la GPU.
+if (preferences.low_latency) {
+  // GPU: dibujar el canvas con la GPU y evitar copias de memoria.
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
+  // Nada de throttling cuando la ventana no esta en primer plano / tapada.
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-background-timer-throttling');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  // Chromium en Windows calcula si la ventana esta tapada (cuesta CPU y puede
+  // frenar el render); lo apagamos. 'disable-features' se pasa en UNA sola
+  // llamada porque una segunda pisaria a la primera.
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+  // Sin limite de eventos de teclado/mouse por segundo hacia la pagina.
+  app.commandLine.appendSwitch('disable-ipc-flooding-protection');
+  console.log("Low latency flags enabled")
+}
 
 
 const createWindow = () => {
@@ -123,7 +146,8 @@ const createWindow = () => {
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false
+      nodeIntegration: false,
+      backgroundThrottling: !preferences.low_latency
     },
     title: "HaxBall Client by og"
   });

@@ -6,6 +6,8 @@
 	"line_width_field": 1.5,
 	"line_width_ball": 1,
 	"line_width_players": 1,
+	"theme_enabled": true,
+	"theme_accent": "#3b82f6",
 	"chat_opacity": 0.8,
 	"notes": [],
 	"transp_ui": false,

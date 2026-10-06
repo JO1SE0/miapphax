@@ -1,3 +1,5 @@
+import { themed } from "./theme";
+
 export const formatDate = (date: Date): string => {
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
@@ -10,6 +12,8 @@ export const createButton = (
 		overColor: string,
 		onClick: () => void
 	): HTMLButtonElement => {
+		backgroundColor = themed(backgroundColor);
+		overColor = themed(overColor);
 		const btn = document.createElement('button');
 		btn.textContent = label;
 		btn.style.flex = '1';

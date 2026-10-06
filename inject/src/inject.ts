@@ -4,6 +4,7 @@ import { setupUIElements } from "./ui/setupUIElements"
 import { handleGameView } from "./handleview";
 import { exportCurrentProfile, loadProfileToLocalStorage, Profile } from "./profiles";
 import { startLinesWatcher } from "./lines";
+import { startThemeWatcher } from "./theme";
 
 async function init() {    
     // remove ads, modify header, add command bar
@@ -43,6 +44,9 @@ async function init() {
 
     // grosor configurable de lineas (cancha / pelota / jugadores)
     startLinesWatcher();
+
+    // tema moderno + color de acento
+    startThemeWatcher();
 
     try {
         const targetElement = await waitForElement("div[class$='view']");
