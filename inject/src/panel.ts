@@ -4,7 +4,7 @@
 
 import { getLinesConfig, updateLinesLive } from "./lines";
 import { openSettingsAlert } from "./settings";
-import { PRESETS, getThemeConfig, isValidHex, updateThemeLive } from "./theme";
+import { CLUB_THEME, PRESETS, getThemeConfig, isValidHex, updateThemeLive } from "./theme";
 import { copyToClipboard, dumpUiStructure } from "./uidump";
 
 const STYLE_ID = "hax-panel-style";
@@ -29,8 +29,14 @@ const SECTIONS: { id: SectionId; label: string; title: string }[] = [
 
 const CSS = `
 #${ROOT_ID} { position: fixed; top: 0; left: 0; bottom: 0; z-index: 2147483000; font-family: inherit; color: #e6e9ee; }
-#${ROOT_ID}.hx-hidden { display: none; }
-#${ROOT_ID} .hx-bar { position: absolute; top: 0; left: 0; bottom: 0; width: ${WIDTH}px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; background: rgba(10,12,16,.88); backdrop-filter: blur(10px); border-right: 1px solid rgba(255,255,255,.06); }
+#${ROOT_ID} .hx-hot { position: fixed; top: 0; left: 0; bottom: 0; width: 8px; z-index: 1; }
+#${ROOT_ID}.hx-open .hx-hot, #${ROOT_ID}.hx-nohot .hx-hot { display: none; }
+#${ROOT_ID} .hx-logo { display: none; width: 46px; height: 46px; margin-bottom: 6px; border-radius: 12px; background: center / contain no-repeat; flex: 0 0 auto; }
+#${ROOT_ID} .hx-logo.on { display: block; }
+#${ROOT_ID} .hx-logo-preview { width: 52px; height: 52px; border-radius: 12px; background: rgba(255,255,255,.05) center / contain no-repeat; }
+#${ROOT_ID}:not(.hx-open) .hx-drawer { opacity: 0 !important; pointer-events: none !important; transform: translateX(-12px) !important; }
+#${ROOT_ID} .hx-bar { position: absolute; top: 0; left: 0; bottom: 0; width: ${WIDTH}px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; background: rgba(10,12,16,.88); backdrop-filter: blur(10px); border-right: 1px solid rgba(255,255,255,.06); transform: translateX(-100%); transition: transform .18s ease; pointer-events: none; }
+#${ROOT_ID}.hx-open .hx-bar { transform: none; pointer-events: auto; }
 #${ROOT_ID} .hx-nav { width: 56px; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent !important; border: 1px solid transparent !important; color: #9aa3b2 !important; cursor: pointer; font-size: 10px; font-weight: 600; }
 #${ROOT_ID} .hx-nav:hover { color: #fff !important; background: rgba(255,255,255,.06) !important; }
 #${ROOT_ID} .hx-nav.on { color: #fff !important; background: var(--hx-accent-soft, rgba(59,130,246,.3)) !important; border-color: var(--hx-accent, #3b82f6) !important; }
@@ -256,11 +262,36 @@ const buildLook = async (): Promise<HTMLElement> => {
 		(v) => SAVE("theme_density", v),
 		"Espacio entre filas y bloques"));
 
+	box.appendChild(group("Tema del club"));
+	const club = el("button", "hx-btn", "Giallorossi (rojo y amarillo)");
+	club.style.width = "100%";
+	club.addEventListener("click", () => {
+		updateThemeLive({ accent: CLUB_THEME.accent, accent2: CLUB_THEME.accent2, glow: "", enabled: true });
+		SAVE("theme_accent", CLUB_THEME.accent);
+		SAVE("theme_accent2", CLUB_THEME.accent2);
+		SAVE("theme_glow", "");
+		SAVE("theme_enabled", true);
+		openSection = null;
+		showSection("look"); // recargar los controles con los colores nuevos
+	});
+	box.appendChild(club);
+	box.appendChild(buildLogoRow());
+
 	box.appendChild(group("Colores"));
 	box.appendChild(colorRow("Color de acento", t.accent,
 		(hex) => updateThemeLive({ accent: hex, enabled: true }),
 		(hex) => { SAVE("theme_accent", hex); SAVE("theme_enabled", true); },
 		undefined, PRESETS));
+
+	const noSecond = el("button", "hx-btn ghost", "Quitar");
+	noSecond.addEventListener("click", () => {
+		updateThemeLive({ accent2: "" });
+		SAVE("theme_accent2", "");
+	});
+	box.appendChild(colorRow("Color secundario", t.accent2 || t.accent,
+		(hex) => updateThemeLive({ accent2: hex }),
+		(hex) => SAVE("theme_accent2", hex),
+		noSecond, undefined, "Detalles y segundo brillo (amarillo en el tema del club)"));
 
 	const sameAsAccent = el("button", "hx-btn ghost", "= acento");
 	sameAsAccent.title = "Usar el mismo color que el acento";
@@ -288,8 +319,10 @@ const buildLook = async (): Promise<HTMLElement> => {
 		"Agranda o achica toda la app"));
 
 	box.appendChild(group("Barra lateral"));
-	box.appendChild(switchRow("Ocultar dentro de una sala", "Con F9 la mostras u ocultas cuando quieras",
-		prefs?.panel_hide_ingame ?? true, (on) => { hideInGame = on; SAVE("panel_hide_ingame", on); }));
+	box.appendChild(switchRow("Aparecer al acercar el mouse", "Pasa el mouse por el borde izquierdo; se esconde sola al salir. F9 la deja fija",
+		hoverEnabled, (on) => { hoverEnabled = on; SAVE("panel_hover", on); updateVisibility(); }));
+	box.appendChild(switchRow("Tambien dentro de una sala", "Apagado: en partida solo aparece con F9, asi no salta sin querer",
+		hoverInGame, (on) => { hoverInGame = on; SAVE("panel_hover_ingame", on); updateVisibility(); }));
 	return box;
 };
 
@@ -385,9 +418,18 @@ let root: HTMLDivElement | null = null;
 let drawer: HTMLDivElement | null = null;
 let content: HTMLDivElement | null = null;
 let banner: HTMLDivElement | null = null;
+let logoEl: HTMLDivElement | null = null;
 let openSection: SectionId | null = null;
-let hideInGame = true;
-let override: boolean | null = null; // F9: true = forzar visible, false = forzar oculto
+
+// visibilidad: se muestra si esta fijada con F9 o si el mouse esta encima
+let hoverEnabled = true; // aparecer al acercar el mouse al borde
+let hoverInGame = false; // lo mismo, pero dentro de una sala
+let pinned = false; // F9
+let hovering = false;
+let pointerInside = false;
+let dragging = false; // arrastrando un slider (el mouse puede salir del panel)
+let holdOpen = false; // selector de color / de archivo abierto
+let hideTimer: number | undefined;
 let lastInGame = false;
 
 const refreshBanner = (): void => {
@@ -426,32 +468,162 @@ const isInGame = (): boolean => {
 	}
 };
 
+const hotAllowed = (): boolean => hoverEnabled && (hoverInGame || !lastInGame);
+
+const applyOpen = (): void => {
+	if (!root) return;
+	const open = pinned || hovering;
+	root.classList.toggle("hx-open", open);
+	if (!open) closeDrawer();
+};
+
 const updateVisibility = (): void => {
 	if (!root) return;
 	const inGame = isInGame();
-	if (inGame !== lastInGame) { // al entrar / salir de una sala se vuelve al modo automatico
+	if (inGame !== lastInGame) { // al entrar / salir de una sala se empieza de cero
 		lastInGame = inGame;
-		override = null;
-		if (inGame) closeDrawer();
+		pinned = false;
+		hovering = false;
 	}
-	const visible = override ?? !(hideInGame && inGame);
-	root.classList.toggle("hx-hidden", !visible);
+	root.classList.toggle("hx-nohot", !hotAllowed());
+	// red de seguridad: si quedo abierta por el mouse pero ya no hay nada que la
+	// retenga (el mouse salio de la ventana sin avisar), se programa el cierre
+	if (hovering && !pinned && !pointerInside && !dragging && !holdOpen && hideTimer === undefined) {
+		scheduleHide();
+	}
+	applyOpen();
+};
+
+const cancelHide = (): void => {
+	if (hideTimer !== undefined) { window.clearTimeout(hideTimer); hideTimer = undefined; }
+};
+
+const scheduleHide = (): void => {
+	cancelHide();
+	hideTimer = window.setTimeout(() => {
+		hideTimer = undefined;
+		if (pointerInside || dragging || holdOpen) return;
+		hovering = false;
+		applyOpen();
+	}, 350);
+};
+
+// Mientras hay un selector nativo abierto (color, archivo) el mouse sale de la
+// pagina; no escondemos hasta que se cierre (clic afuera o la ventana recupera foco).
+export const holdUntilDone = (): void => {
+	holdOpen = true;
+	const release = () => {
+		holdOpen = false;
+		document.removeEventListener("mousedown", onDown, true);
+		if (!pointerInside) scheduleHide();
+	};
+	const onDown = (e: MouseEvent) => {
+		if (!root?.contains(e.target as Node)) release();
+	};
+	document.addEventListener("mousedown", onDown, true);
+	window.addEventListener("focus", () => window.setTimeout(release, 400), { once: true });
 };
 
 export const togglePanel = (): void => {
 	if (!root) return;
-	const visible = !root.classList.contains("hx-hidden");
-	override = !visible;
-	if (visible) closeDrawer();
-	updateVisibility();
+	pinned = !pinned;
+	if (!pinned) hovering = false;
+	applyOpen();
 };
+
+// ---- escudo del club (imagen propia) -------------------------------------------
+
+const setLogo = (url: string): void => {
+	if (!logoEl) return;
+	const ok = typeof url === "string" && url.startsWith("data:image/");
+	logoEl.style.backgroundImage = ok ? `url("${url}")` : "";
+	logoEl.classList.toggle("on", ok);
+};
+
+const fileToLogo = (file: File, size: number): Promise<string> =>
+	new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onerror = () => reject(reader.error);
+		reader.onload = () => {
+			const img = new Image();
+			img.onerror = () => reject(new Error("imagen invalida"));
+			img.onload = () => {
+				const canvas = document.createElement("canvas");
+				canvas.width = size;
+				canvas.height = size;
+				const ctx = canvas.getContext("2d");
+				if (!ctx) return reject(new Error("sin canvas"));
+				const scale = Math.min(size / img.width, size / img.height);
+				const w = img.width * scale;
+				const h = img.height * scale;
+				ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+				resolve(canvas.toDataURL("image/png"));
+			};
+			img.src = String(reader.result);
+		};
+		reader.readAsDataURL(file);
+	});
+
+function buildLogoRow(): HTMLDivElement {
+	const row = el("div", "hx-row");
+	const preview = el("div", "hx-logo-preview");
+	const refreshPreview = () => {
+		preview.style.backgroundImage = logoEl?.style.backgroundImage || "";
+	};
+	refreshPreview();
+
+	const pick = el("button", "hx-btn", "Elegir imagen");
+	pick.addEventListener("click", () => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = "image/*";
+		input.addEventListener("change", async () => {
+			const file = input.files?.[0];
+			if (!file) return;
+			try {
+				const url = await fileToLogo(file, 128);
+				SAVE("club_logo", url);
+				setLogo(url);
+				refreshPreview();
+			} catch (error) {
+				console.error("[panel] escudo", error);
+			}
+		});
+		holdUntilDone();
+		input.click();
+	});
+	const clear = el("button", "hx-btn ghost", "Quitar");
+	clear.addEventListener("click", () => {
+		SAVE("club_logo", "");
+		setLogo("");
+		refreshPreview();
+	});
+
+	const buttons = el("div", "hx-swatches");
+	buttons.appendChild(pick);
+	buttons.appendChild(clear);
+	row.appendChild(labelBlock("Escudo del club", "Tu propia imagen; aparece arriba en la barra lateral"));
+	row.appendChild(preview);
+	const wrap = el("div");
+	wrap.style.cssText = "display:flex;flex-direction:column;gap:8px;";
+	wrap.appendChild(row);
+	wrap.appendChild(buttons);
+	const outer = el("div");
+	outer.appendChild(wrap);
+	return outer;
+}
+
+// ---- armado ------------------------------------------------------------------------
 
 export const startPanel = async (): Promise<void> => {
 	if (document.getElementById(ROOT_ID)) return;
 
+	let logo = "";
 	try {
 		const prefs = await window.electronAPI.getAppPreferences();
-		hideInGame = prefs?.panel_hide_ingame ?? true;
+		hoverEnabled = prefs?.panel_hover ?? true;
+		hoverInGame = prefs?.panel_hover_ingame ?? false;
+		logo = typeof prefs?.club_logo === "string" ? prefs.club_logo : "";
 	} catch { /* valores por defecto */ }
 
 	const style = document.createElement("style");
@@ -462,7 +634,19 @@ export const startPanel = async (): Promise<void> => {
 	root = el("div");
 	root.id = ROOT_ID;
 
+	const hot = el("div", "hx-hot");
+	hot.addEventListener("mouseenter", () => {
+		if (!hotAllowed()) return;
+		pointerInside = true;
+		cancelHide();
+		hovering = true;
+		applyOpen();
+	});
+
 	const bar = el("div", "hx-bar");
+	logoEl = el("div", "hx-logo");
+	bar.appendChild(logoEl);
+	setLogo(logo);
 	SECTIONS.forEach((s) => {
 		const btn = el("button", "hx-nav");
 		btn.dataset.section = s.id;
@@ -484,6 +668,25 @@ export const startPanel = async (): Promise<void> => {
 	drawer.appendChild(content);
 	drawer.appendChild(banner);
 
+	// el mouse sobre la barra o el panel lo mantiene abierto; al salir se esconde solo
+	[bar, drawer].forEach((part) => {
+		part.addEventListener("mouseenter", () => { pointerInside = true; cancelHide(); });
+		part.addEventListener("mouseleave", () => { pointerInside = false; scheduleHide(); });
+	});
+	// arrastrar un slider puede sacar el mouse del panel: no esconder hasta soltar
+	root.addEventListener("mousedown", () => { dragging = true; });
+	document.addEventListener("mouseup", () => {
+		if (!dragging) return;
+		dragging = false;
+		if (!pointerInside) scheduleHide();
+	});
+	// selector de color nativo
+	root.addEventListener("click", (e) => {
+		const t = e.target as HTMLElement;
+		if (t instanceof HTMLInputElement && t.type === "color") holdUntilDone();
+	});
+
+	root.appendChild(hot);
 	root.appendChild(bar);
 	root.appendChild(drawer);
 	document.body.appendChild(root);

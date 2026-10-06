@@ -19,6 +19,7 @@ export type Hsl = { h: number; s: number; l: number };
 export type ThemeConfig = {
 	enabled: boolean;
 	accent: string;
+	accent2: string; // color secundario ("" = ninguno)
 	glow: string; // color del brillo de fondo ("" = el mismo que el acento)
 	glowStrength: number; // 0 = sin brillo, 1 = muy fuerte
 	radius: number; // radio de esquinas en px
@@ -28,9 +29,16 @@ export type ThemeConfig = {
 	lowGpu: boolean; // sin blur (viene del modo baja latencia)
 };
 
+// Tema del club: giallorossi (rojo y amarillo)
+export const CLUB_THEME = { name: "Giallorossi", accent: "#d2232a", accent2: "#f5c400" };
+
+// Acento que traia la version anterior; se usa para migrar a los que no lo cambiaron.
+const LEGACY_ACCENT = "#3b82f6";
+
 export const DEFAULT_THEME: ThemeConfig = {
 	enabled: true,
-	accent: "#3b82f6",
+	accent: CLUB_THEME.accent,
+	accent2: CLUB_THEME.accent2,
 	glow: "",
 	glowStrength: 0.35,
 	radius: 8,
@@ -179,7 +187,7 @@ export const accentToHsl = (hex: string): Hsl => {
 // el iframe del juego no lo lleva.
 export const buildModernCss = (
 	hex: string,
-	opts: { radius?: number; glow?: string; glowStrength?: number } = {},
+	opts: { radius?: number; glow?: string; glowStrength?: number; accent2?: string } = {},
 	top: boolean = false
 ): string => {
 	const safe = isValidHex(hex) ? hex : DEFAULT_THEME.accent;
@@ -192,6 +200,8 @@ export const buildModernCss = (
 
 	const strength = clamp(Number.isFinite(opts.glowStrength as number) ? (opts.glowStrength as number) : DEFAULT_THEME.glowStrength, 0, 1);
 	const [gr, gg, gb] = opts.glow && isValidHex(opts.glow) ? hexToRgb(opts.glow) : [mr, mg, mb];
+	const has2 = !!opts.accent2 && isValidHex(opts.accent2);
+	const [sr, sg, sb] = has2 ? hexToRgb(opts.accent2 as string) : [gr, gg, gb];
 	const glowCss = top && strength > 0 ? `
 html::before {
 	content: "";
@@ -201,7 +211,7 @@ html::before {
 	pointer-events: none;
 	background:
 		radial-gradient(60% 55% at 10% 18%, rgba(${gr}, ${gg}, ${gb}, ${(strength * 0.55).toFixed(3)}) 0%, transparent 70%),
-		radial-gradient(50% 50% at 92% 90%, rgba(${gr}, ${gg}, ${gb}, ${(strength * 0.4).toFixed(3)}) 0%, transparent 70%);
+		radial-gradient(50% 50% at 92% 90%, rgba(${sr}, ${sg}, ${sb}, ${(strength * 0.4).toFixed(3)}) 0%, transparent 70%);
 }` : "";
 
 	return `
@@ -209,6 +219,7 @@ html::before {
 	--hx-accent: ${main};
 	--hx-accent-hover: ${hover};
 	--hx-accent-soft: rgba(${mr}, ${mg}, ${mb}, 0.35);
+	--hx-accent2: ${has2 ? opts.accent2 : main};
 	--hx-radius: ${radius}px;
 }
 button {
@@ -311,7 +322,7 @@ export const applyThemeToDocument = (doc: Document | null | undefined): void => 
 		}
 		modern.textContent = buildModernCss(
 			current.accent,
-			{ radius: current.radius, glow: current.glow, glowStrength: current.glowStrength },
+			{ radius: current.radius, glow: current.glow, glowStrength: current.glowStrength, accent2: current.accent2 },
 			doc === document
 		);
 		if (current.cards) {
@@ -367,6 +378,7 @@ export const startThemeWatcher = async (): Promise<void> => {
 		current = {
 			enabled: prefs?.theme_enabled ?? DEFAULT_THEME.enabled,
 			accent: isValidHex(prefs?.theme_accent) ? prefs.theme_accent : DEFAULT_THEME.accent,
+			accent2: isValidHex(prefs?.theme_accent2) ? prefs.theme_accent2 : "",
 			glow: isValidHex(prefs?.theme_glow) ? prefs.theme_glow : "",
 			glowStrength: Number.isFinite(Number(prefs?.theme_glow_strength))
 				? clamp(Number(prefs.theme_glow_strength), 0, 1)
@@ -383,6 +395,17 @@ export const startThemeWatcher = async (): Promise<void> => {
 				: DEFAULT_THEME.density,
 			lowGpu: prefs?.low_latency === true,
 		};
+		// Primera vez con el tema del club: quien no habia elegido un color propio
+		// (sin acento guardado, o el azul por defecto de antes) pasa a giallorossi.
+		if (
+			prefs?.theme_accent2 === undefined &&
+			(prefs?.theme_accent === undefined || String(prefs.theme_accent).toLowerCase() === LEGACY_ACCENT)
+		) {
+			current.accent = CLUB_THEME.accent;
+			current.accent2 = CLUB_THEME.accent2;
+			window.electronAPI.setAppPreference("theme_accent", CLUB_THEME.accent);
+			window.electronAPI.setAppPreference("theme_accent2", CLUB_THEME.accent2);
+		}
 		// zoom de la interfaz (1 = 100%)
 		window.electronAPI.setZoom?.(Number(prefs?.ui_zoom) || 1);
 	} catch (error) {

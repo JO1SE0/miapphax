@@ -71,7 +71,8 @@ button, input, select, textarea { font-family: inherit; }
 	font-size: 22px;
 	font-weight: 700;
 	letter-spacing: -0.01em;
-	border-bottom: 1px solid var(--hx-card-border);
+	border-bottom: 2px solid transparent;
+	border-image: linear-gradient(90deg, var(--hx-accent, #3b82f6), var(--hx-accent2, var(--hx-accent, #3b82f6)) 60%, transparent) 1;
 	padding-bottom: 12px;
 }
 .room-view > .container > h1::before {
@@ -82,8 +83,8 @@ button, input, select, textarea { font-family: inherit; }
 	margin-right: 10px;
 	border-radius: 50%;
 	vertical-align: middle;
-	background: var(--hx-accent, #3b82f6);
-	box-shadow: 0 0 10px var(--hx-accent, #3b82f6);
+	background: var(--hx-accent2, var(--hx-accent, #3b82f6));
+	box-shadow: 0 0 10px var(--hx-accent2, var(--hx-accent, #3b82f6));
 }
 .room-view .header-btns button,
 .room-view .teams .tools button {
@@ -160,6 +161,8 @@ button, input, select, textarea { font-family: inherit; }
 .roomlist-view tbody tr td:last-child { border-radius: 0 var(--hx-radius, 8px) var(--hx-radius, 8px) 0; }
 .roomlist-view tbody tr:hover td,
 .roomlist-view tbody tr.selected td { background: var(--hx-accent-soft, rgba(59, 130, 246, 0.3)) !important; }
+.roomlist-view tbody tr:hover td:first-child,
+.roomlist-view tbody tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--hx-accent2, var(--hx-accent, #3b82f6)); }
 .roomlist-view input[type=checkbox] { accent-color: var(--hx-accent, #3b82f6); }
 
 /* ---------- Elegir nombre / ajustes ---------- */
