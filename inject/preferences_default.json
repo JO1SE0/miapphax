@@ -1,9 +1,10 @@
 {
 
-  "fps_unlock": false,
-  "low_latency": false,
-  "reduce_effects": false,
-  "chat_opacity": 0.8,
+"fps_unlock": false,
+"low_latency": false,
+"reduce_effects": false,
+"graphics_line_width": 1,
+"chat_opacity": 0.8,
   "notes": [],
   "transp_ui": false,
     "shortcuts": [

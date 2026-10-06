@@ -4,7 +4,7 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build:ts && electron .",
     "build:ts": "esbuild inject/src/inject.ts --bundle --outfile=inject/inject.js --format=iife --minify",
     "build:mac": "electron-builder --mac",
     "build:win-x64": "electron-builder --win --x64",

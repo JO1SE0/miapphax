@@ -1,4 +1,4 @@
-const { app, shell, BrowserWindow, ipcMain, dialog, screen } = require('electron');
+﻿const { app, shell, BrowserWindow, ipcMain, dialog, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { URL } = require('url');
@@ -128,7 +128,7 @@ const createWindow = () => {
     title: "HaxBall Client by og"
   });
   
-  const extensionPath = path.join(path.dirname(__dirname), 'app.asar.unpacked', 'inject', 'Haxball-Room-Extension');
+  const extensionPath = path.join(__dirname, 'inject', 'Haxball-Room-Extension');
   win.webContents.session.loadExtension(extensionPath);
 
   win.loadURL('https://www.haxball.com/play');
@@ -357,3 +357,20 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+const electronTest = require('electron');
+
+electronTest.app.whenReady().then(() => {
+  console.log("=== F8 TEST LOADED ===");
+
+  electronTest.globalShortcut.register('F8', () => {
+    console.log("=== F8 PRESSED ===");
+
+    electronTest.dialog.showMessageBox({
+      type: 'info',
+      title: 'F8 FUNCIONA',
+      message: 'Electron recibió F8 correctamente.'
+    });
+  });
+});
+
