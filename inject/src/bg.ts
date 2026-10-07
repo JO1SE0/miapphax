@@ -15,7 +15,8 @@ const isGreen = (css: string): boolean => {
 	if (!m) return false;
 	const [r, g, b] = [+m[1], +m[2], +m[3]];
 	const a = m[4] === undefined ? 1 : +m[4];
-	return a > 0.5 && g > r + 12 && g > b + 12;
+	// verde / oliva (el pasto del juego es rgb(147,158,127)): el canal verde manda
+	return a > 0.5 && g >= r && g > b + 15;
 };
 
 const hasImage = (css: string): boolean => /url\(/i.test(css);
@@ -59,7 +60,9 @@ const scan = (doc: Document): void => {
 		const isRoot = node === doc.documentElement || node === doc.body;
 		if (!isRoot && (rect.width < minW || rect.height < minH)) continue;
 		const cs = view.getComputedStyle(node);
-		if (isGreen(cs.backgroundColor) || (hasImage(cs.backgroundImage) && !node.querySelector("canvas"))) {
+		// html/body siempre se pintan si tienen imagen (el canvas del juego va encima);
+		// en contenedores intermedios se evita tocar los que envuelven un canvas.
+		if (isGreen(cs.backgroundColor) || (hasImage(cs.backgroundImage) && (isRoot || !node.querySelector("canvas")))) {
 			node.setAttribute(ATTR, "");
 		}
 	}
