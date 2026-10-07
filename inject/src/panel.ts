@@ -397,6 +397,32 @@ const buildPitch = async (): Promise<HTMLElement> => {
 	box.appendChild(slider("Lineas de cancha", "field", "line_width_field"));
 	box.appendChild(slider("Pelota y objetos", "ball", "line_width_ball"));
 	box.appendChild(slider("Jugadores", "players", "line_width_players"));
+
+	box.appendChild(group("Extras visuales"));
+	box.appendChild(el("p", "hx-sub", "Solo cambian como se dibuja en TU pantalla. No tocan la fisica: los choques usan los tamaños reales. F7 los prende y apaga."));
+	box.appendChild(switchRow("Activar extras visuales", "Apagado = todo se ve como el original", l.cosEnabled, (on) => {
+		updateLinesLive({ cosEnabled: on });
+		SAVE("vis_enabled", on);
+	}));
+	const pct = (v: number) => `${Math.round(v * 100)}%`;
+	box.appendChild(sliderRow("Tamaño de mi ficha", l.myScale, 0.5, 1.6, 0.05, pct,
+		(v) => updateLinesLive({ myScale: v }), (v) => SAVE("vis_my_scale", v), "Solo la tuya, no la de los demas"));
+	box.appendChild(sliderRow("Tamaño de la pelota", l.ballScale, 0.5, 1.6, 0.05, pct,
+		(v) => updateLinesLive({ ballScale: v }), (v) => SAVE("vis_ball_scale", v)));
+	const origBall = el("button", "hx-btn ghost", "Original");
+	origBall.title = "Volver al color original de la pelota";
+	origBall.addEventListener("click", () => {
+		updateLinesLive({ ballColor: "" });
+		SAVE("vis_ball_color", "");
+	});
+	box.appendChild(colorRow("Color de la pelota", l.ballColor || "#ffffff",
+		(hex) => updateLinesLive({ ballColor: hex }),
+		(hex) => SAVE("vis_ball_color", hex),
+		origBall, undefined, "Original = el del mapa"));
+	box.appendChild(switchRow("Estela de la pelota", "Rastro que sigue a la pelota", l.ballTrail, (on) => {
+		updateLinesLive({ ballTrail: on });
+		SAVE("vis_ball_trail", on);
+	}));
 	return box;
 };
 

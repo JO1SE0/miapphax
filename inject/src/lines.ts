@@ -1,3 +1,6 @@
+import { COS_DEFAULTS, installCosmetics } from "./cosmetics";
+import type { CosConfig } from "./cosmetics";
+
 // lines.ts
 // Parches del canvas del juego: grosor de lineas, cancha plana y canvas de baja latencia.
 //
@@ -15,7 +18,7 @@
 // Los jugadores se rellenan con un CanvasPattern creado desde un CANVAS (su avatar),
 // el pasto/cemento desde una IMAGEN, y la pelota con un color: asi se distinguen.
 
-export type LinesConfig = {
+export type LinesConfig = CosConfig & {
 	enabled: boolean;
 	field: number;
 	ball: number;
@@ -51,6 +54,7 @@ export const DEFAULT_CONFIG: LinesConfig = {
 	bgEnabled: true,
 	bgFrom: "#203860",
 	bgTo: "#08101f",
+	...COS_DEFAULTS,
 };
 
 // ¿Es un color de texto tipo pasto (verde)? Los patrones se detectan aparte.
@@ -247,6 +251,8 @@ export const installLinePatch = (win: any): boolean => {
 		};
 	}
 
+	installCosmetics(win, () => win[CONFIG_KEY]);
+
 	win[PATCH_FLAG] = true;
 	return true;
 };
@@ -266,6 +272,11 @@ const num = (value: any, fallback: number): number => {
 	return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
+const clampScale = (v: any): number => {
+	const n = Number(v);
+	return Number.isFinite(n) ? Math.min(1.6, Math.max(0.5, n)) : 1;
+};
+
 const readConfigFromPrefs = (prefs: any): LinesConfig => ({
 	enabled: prefs?.lines_enabled ?? DEFAULT_CONFIG.enabled,
 	field: num(prefs?.line_width_field, DEFAULT_CONFIG.field),
@@ -278,6 +289,11 @@ const readConfigFromPrefs = (prefs: any): LinesConfig => ({
 	bgEnabled: prefs?.bg_enabled ?? DEFAULT_CONFIG.bgEnabled,
 	bgFrom: /^#[0-9a-f]{6}$/i.test(prefs?.bg_from) ? prefs.bg_from : DEFAULT_CONFIG.bgFrom,
 	bgTo: /^#[0-9a-f]{6}$/i.test(prefs?.bg_to) ? prefs.bg_to : DEFAULT_CONFIG.bgTo,
+	cosEnabled: prefs?.vis_enabled ?? COS_DEFAULTS.cosEnabled,
+	myScale: clampScale(prefs?.vis_my_scale),
+	ballScale: clampScale(prefs?.vis_ball_scale),
+	ballColor: /^#[0-9a-f]{6}$/i.test(prefs?.vis_ball_color) ? prefs.vis_ball_color : "",
+	ballTrail: prefs?.vis_ball_trail === true,
 });
 
 const getGameWindow = (): any => {
@@ -325,6 +341,13 @@ const toast = (text: string): void => {
 	setTimeout(() => el.remove(), 1200);
 };
 
+export const toggleCosmetics = async (): Promise<void> => {
+	const cosEnabled = !current.cosEnabled;
+	updateLinesLive({ cosEnabled });
+	await window.electronAPI.setAppPreference("vis_enabled", cosEnabled);
+	toast(cosEnabled ? "Extras visuales: ON" : "Extras visuales: OFF");
+};
+
 export const toggleLines = async (): Promise<void> => {
 	const enabled = !current.enabled;
 	updateLinesLive({ enabled });
@@ -342,6 +365,7 @@ export const startLinesWatcher = async (): Promise<void> => {
 	}
 
 	(window as any).__haxToggleLines = toggleLines;
+	(window as any).__haxToggleCos = toggleCosmetics;
 	// Diagnostico: en la consola de DevTools escribi  __haxLinesDebug(true)
 	(window as any).__haxLinesDebug = (on: boolean = true) => {
 		updateLinesLive({ debug: on });

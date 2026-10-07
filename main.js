@@ -239,6 +239,7 @@ const createWindow = () => {
   // Atajos: F8 = lineas finas on/off, F9 = mostrar/ocultar el panel lateral
   const hotkeys = {
     F8: 'window.__haxToggleLines && window.__haxToggleLines()',
+    F7: 'window.__haxToggleCos && window.__haxToggleCos()',
     F9: 'window.__haxTogglePanel && window.__haxTogglePanel()'
   };
   win.webContents.on('before-input-event', (event, input) => {
