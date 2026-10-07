@@ -29,7 +29,10 @@ let win;
   app.setName('TL App');
 })();
 
-const rpcClientId = "1391027232352501841";
+// Id de la aplicacion de Discord. El nombre que aparece en "Jugando a ..." es el de ESA
+// aplicacion: para que diga TL App, crea la tuya en discord.com/developers y pon su id en
+// preferences.json ("discord_client_id"). Si no, usa la del cliente original.
+const DEFAULT_RPC_ID = "1391027232352501841";
 const rpc = new DiscordRPC.Client({ transport: 'ipc' });
 rpc.on('ready', () => {
 	console.log('Discord RPC ready');
@@ -415,13 +418,19 @@ ipcMain.handle('generate-player-auth-key', async (event) => {
   return idkey
 })
 
-ipcMain.on('update-discord-rpc', (_event, details) => {
+let rpcLastKey = '';
+let rpcSince = Date.now();
+ipcMain.on('update-discord-rpc', (_event, details, state) => {
+  // el contador de tiempo solo se reinicia al cambiar de sala / pantalla
+  const key = String(details);
+  if (key !== rpcLastKey) { rpcLastKey = key; rpcSince = Date.now(); }
   const activity = {
-    details: details,
+    details: String(details).slice(0, 128),
     largeImageKey: 'client-logo',
     largeImageText: 'TL App',
-    startTimestamp: Date.now(),
-  }
+    startTimestamp: rpcSince,
+  };
+  if (state) activity.state = String(state).slice(0, 128);
 
   rpc.setActivity(activity).catch((err) => {
     console.error('Discord RPC Error: Not logged in');
@@ -438,7 +447,8 @@ app.whenReady().then(() => {
   const enableRPC = data["discord_rpc"] ?? true;
 
   if (enableRPC){
-    rpc.login({ clientId: rpcClientId });
+    const customId = String(data["discord_client_id"] || '').trim();
+    rpc.login({ clientId: /^\d{15,25}$/.test(customId) ? customId : DEFAULT_RPC_ID }).catch(() => {});
   }
 });
 

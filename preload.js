@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deletePreferencesFile: () => ipcRenderer.invoke('delete-preferences-file'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   generatePlayerAuthKey: () => ipcRenderer.invoke('generate-player-auth-key'),
-  updateDiscordRPC: (details) => ipcRenderer.send('update-discord-rpc', details),
+  updateDiscordRPC: (details, state) => ipcRenderer.send('update-discord-rpc', details, state),
   // zoom de toda la interfaz (1 = 100%)
   setZoom: (factor) => webFrame.setZoomFactor(Math.min(2, Math.max(0.5, Number(factor) || 1)))
 });

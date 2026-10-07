@@ -19,6 +19,7 @@
 	"panel_hover": true,
 	"panel_hover_ingame": false,
 	"club_logo": "",
+	"discord_client_id": "",
 	"bg_enabled": true,
 	"bg_from": "#203860",
 	"bg_to": "#08101f",

@@ -7,6 +7,7 @@ import { startLinesWatcher } from "./lines";
 import { startThemeWatcher } from "./theme";
 import { startPanel } from "./panel";
 import { startBackgroundWatcher } from "./bg";
+import { startDiscordPresence } from "./rpc";
 
 async function init() {    
     // remove ads, modify header, add command bar
@@ -53,6 +54,7 @@ async function init() {
     // barra lateral con paneles de personalizacion (F9 la oculta / muestra)
     startPanel();
     startBackgroundWatcher();
+    startDiscordPresence();
 
     try {
         const targetElement = await waitForElement("div[class$='view']");

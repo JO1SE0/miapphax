@@ -9,7 +9,7 @@ export const handleGameView = (viewName: string): void => {
 			if (localStorage.getItem("header_visible") === "false"){
 				toggleHeaderVisibility();
 			}
-			window.electronAPI.updateDiscordRPC("Waiting in the Room List")
+			window.electronAPI.updateDiscordRPC("TL App", "Eligiendo sala")
 			autoUpdater();
 			break;
 		// when a room is entered
@@ -21,7 +21,7 @@ export const handleGameView = (viewName: string): void => {
 			if (localStorage.getItem("header_visible") === "true"){
 				toggleHeaderVisibility();
 			}
-			window.electronAPI.updateDiscordRPC("Playing in a Room")
+			window.electronAPI.updateDiscordRPC("TL App", "Jugando en una sala")
 			setGameView();
 			break;
 		case viewName === "room-view":
