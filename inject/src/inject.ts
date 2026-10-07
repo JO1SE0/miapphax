@@ -10,6 +10,7 @@ import { startBackgroundWatcher } from "./bg";
 import { startDiscordPresence } from "./rpc";
 import { startExtras } from "./extras";
 import { startFx } from "./fx";
+import { startTray } from "./tray";
 
 async function init() {    
     // remove ads, modify header, add command bar
@@ -59,6 +60,7 @@ async function init() {
     startDiscordPresence();
     startExtras();
     startFx();
+    startTray();
 
     try {
         const targetElement = await waitForElement("div[class$='view']");

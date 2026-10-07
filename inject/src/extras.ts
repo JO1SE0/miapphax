@@ -20,6 +20,7 @@ export type ExtrasConfig = {
 	team: string[];
 	favAlerts: boolean;
 	lastRoom: string;
+	lastLink: string; // link de la ultima sala si entraste por link
 };
 
 export const EXTRAS_DEFAULTS: ExtrasConfig = {
@@ -34,6 +35,7 @@ export const EXTRAS_DEFAULTS: ExtrasConfig = {
 	team: [],
 	favAlerts: true,
 	lastRoom: "",
+	lastLink: "",
 };
 
 let cfg: ExtrasConfig = { ...EXTRAS_DEFAULTS };
@@ -58,6 +60,7 @@ export const readExtras = (prefs: any): ExtrasConfig => {
 		team: arr(prefs?.x_team, []),
 		favAlerts: prefs?.x_fav_alerts ?? EXTRAS_DEFAULTS.favAlerts,
 		lastRoom: typeof prefs?.x_last_room === "string" ? prefs.x_last_room : "",
+		lastLink: typeof prefs?.x_last_link === "string" ? prefs.x_last_link : "",
 	};
 };
 
@@ -260,27 +263,56 @@ const checkFavorites = (doc: Document): void => {
 	prevFavs = new Set(now.keys());
 };
 
+const ROOM_LINK = /^https:\/\/www\.haxball\.com\/play\?c=.{11}$/;
+export const isValidRoomLink = (link: string): boolean => ROOM_LINK.test(link.trim());
+
+// Entra a una sala por su link (recarga la pagina con ese link, como hace HaxBall)
+export const joinRoomLink = (link: string): boolean => {
+	const clean = link.trim();
+	if (!isValidRoomLink(clean)) return false;
+	window.location.href = clean;
+	return true;
+};
+
 export const rejoinLastRoom = (): string => {
 	const doc = getDoc();
 	const name = cfg.lastRoom;
-	if (!name) return "Todavia no hay una ultima sala guardada.";
+	// 1) si la lista de salas esta abierta y la sala esta ahi, entra desde la lista
 	const rows = Array.from(doc?.querySelectorAll('[data-hook="list"] tr') || []);
-	if (!rows.length) return "Abri la lista de salas y toca de nuevo.";
-	const row = rows.find((r) => (r.querySelector('[data-hook="name"]')?.textContent || "").trim() === name) as HTMLElement | undefined;
-	if (!row) return `No veo "${name}" en la lista (toca Refresh).`;
-	const win = doc!.defaultView as any;
-	row.click();
-	row.dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true, cancelable: true }));
-	(doc!.querySelector('[data-hook="join"]') as HTMLElement | null)?.click();
-	return `Entrando a "${name}"...`;
+	const row = name
+		? (rows.find((r) => (r.querySelector('[data-hook="name"]')?.textContent || "").trim() === name) as HTMLElement | undefined)
+		: undefined;
+	if (row && doc) {
+		const win = doc.defaultView as any;
+		row.click();
+		row.dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+		(doc.querySelector('[data-hook="join"]') as HTMLElement | null)?.click();
+		return `Entrando a "${name}"...`;
+	}
+	// 2) si habias entrado por link, vuelve por ese link
+	if (cfg.lastLink && joinRoomLink(cfg.lastLink)) return "Volviendo a la ultima sala...";
+	if (!name && !cfg.lastLink) return "Todavia no hay una ultima sala guardada.";
+	return rows.length ? `No veo "${name}" en la lista (toca Refresh).` : "Abri la lista de salas y toca de nuevo.";
 };
 
-const trackLastRoom = (doc: Document, save: (name: string) => void): void => {
+let firstRoomSinceLoad = true;
+const trackLastRoom = (doc: Document, save: (name: string, link: string) => void): void => {
 	const title = doc.querySelector(".room-view .container > h1, .room-view h1");
 	const name = (title?.textContent || "").trim();
-	if (name && name !== cfg.lastRoom) {
+	if (!name) return;
+	// La primera sala desde que cargo la pagina es la del link (si la pagina se abrio con ?c=)
+	const link = firstRoomSinceLoad && /[?&]c=/.test(window.location.search) && isValidRoomLink(window.location.href) ? window.location.href : "";
+	if (name !== cfg.lastRoom) {
 		cfg.lastRoom = name;
-		save(name);
+		cfg.lastLink = link; // si entraste por la lista, el link viejo ya no vale
+		firstRoomSinceLoad = false;
+		save(name, link);
+	} else if (firstRoomSinceLoad) {
+		firstRoomSinceLoad = false;
+		if (link && cfg.lastLink !== link) {
+			cfg.lastLink = link;
+			save(name, link);
+		}
 	}
 };
 
@@ -299,7 +331,10 @@ export const startExtras = async (): Promise<void> => {
 			hookKeys(doc);
 			watchChat(doc);
 			markTeam(doc);
-			trackLastRoom(doc, (n) => window.electronAPI.setAppPreference("x_last_room", n));
+			trackLastRoom(doc, (n, link) => {
+				window.electronAPI.setAppPreference("x_last_room", n);
+				window.electronAPI.setAppPreference("x_last_link", link);
+			});
 		} catch { /* iframe cambiando */ }
 	}, 1000);
 	setInterval(() => {
