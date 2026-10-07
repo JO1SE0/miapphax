@@ -27,6 +27,11 @@ function getOs() {
 }
 
 async function checkLatestRelease() {
+    // TL App: sin aviso de actualizaciones del cliente original
+    return null;
+}
+
+async function _unusedCheckLatestRelease() {
     const res = await fetch(URL.releases, {
         method: "GET",
         headers: {
@@ -54,6 +59,7 @@ async function checkLatestRelease() {
 
 export async function autoUpdater() {
     const latest = await checkLatestRelease();
+    if (!latest) return;
     const current_version = `v${await window.electronAPI.getAppVersion()}`;
 
     if (latest.version !== current_version) {

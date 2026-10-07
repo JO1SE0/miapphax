@@ -1,4 +1,4 @@
-# HaxBall Client by og
+# TL App by og
 
 Unofficial client for the browser game [HaxBall](https://www.haxball.com/play), built with [Electron](https://github.com/electron/electron) and shipping with the browser extension [HaxBall All-in-one Tool](https://github.com/xenonsb/Haxball-Room-Extension).
 

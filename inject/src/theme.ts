@@ -29,8 +29,9 @@ export type ThemeConfig = {
 	lowGpu: boolean; // sin blur (viene del modo baja latencia)
 };
 
-// Tema del club: giallorossi (rojo y amarillo)
-export const CLUB_THEME = { name: "Giallorossi", accent: "#d2232a", accent2: "#f5c400" };
+// Tema del club "Toda la Lecce": colores del escudo (azul marino, amarillo, rojo, dorado)
+export const CLUB_THEME = { name: "Toda la Lecce", accent: "#2d4f8a", accent2: "#f8e800", red: "#e00810", gold: "#d0b878", navy: "#203860" };
+const LEGACY_CLUB = ["#d2232a|#f5c400"];
 
 // Acento que traia la version anterior; se usa para migrar a los que no lo cambiaron.
 const LEGACY_ACCENT = "#3b82f6";
@@ -396,10 +397,12 @@ export const startThemeWatcher = async (): Promise<void> => {
 			lowGpu: prefs?.low_latency === true,
 		};
 		// Primera vez con el tema del club: quien no habia elegido un color propio
-		// (sin acento guardado, o el azul por defecto de antes) pasa a giallorossi.
+		// (sin acento guardado, el azul de antes o el giallorossi anterior) pasa a los colores del escudo.
+		const key = `${String(prefs?.theme_accent).toLowerCase()}|${String(prefs?.theme_accent2).toLowerCase()}`;
 		if (
-			prefs?.theme_accent2 === undefined &&
-			(prefs?.theme_accent === undefined || String(prefs.theme_accent).toLowerCase() === LEGACY_ACCENT)
+			(prefs?.theme_accent2 === undefined &&
+				(prefs?.theme_accent === undefined || String(prefs.theme_accent).toLowerCase() === LEGACY_ACCENT)) ||
+			LEGACY_CLUB.includes(key)
 		) {
 			current.accent = CLUB_THEME.accent;
 			current.accent2 = CLUB_THEME.accent2;

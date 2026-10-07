@@ -6,7 +6,7 @@ electron-builder --linux deb --x64
 cd dist
 
 # extract the version part from the filename using a regex
-VERSION=$(echo $(ls | grep 'HaxBall Client.*\.exe') | sed -E 's/HaxBall Client-([0-9]+\.[0-9]+\.[0-9]+)-.*/\1/')
+VERSION=$(echo $(ls | grep 'TL App.*\.exe') | sed -E 's/TL App-([0-9]+\.[0-9]+\.[0-9]+)-.*/\1/')
 
-zip -r "HaxBall Client-${VERSION}-win-portable.zip" "HaxBall Client-${VERSION}.exe"
-zip -r "HaxBall Client-${VERSION}-linux.zip" *.deb *.AppImage
+zip -r "TL App-${VERSION}-win-portable.zip" "TL App-${VERSION}.exe"
+zip -r "TL App-${VERSION}-linux.zip" *.deb *.AppImage

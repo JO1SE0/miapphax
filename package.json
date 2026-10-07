@@ -31,7 +31,7 @@
   },
   "build": {
     "appId": "com.haxball.client",
-    "productName": "HaxBall Client",
+    "productName": "TL App",
     "asarUnpack": "inject/Haxball-Room-Extension/",
     "compression": "maximum",
     "files": [
@@ -51,7 +51,7 @@
       }
     },
     "win": {
-      "icon": "assets/icon.png",
+      "icon": "assets/icon.ico",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "target": [
         {

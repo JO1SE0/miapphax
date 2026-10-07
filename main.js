@@ -8,6 +8,27 @@ const { generateKeyPairSync } = require('crypto');
 const DiscordRPC = require ("discord-rpc");
 
 let win;
+// --- Identidad "TL App" ---------------------------------------------------
+// La carpeta de datos (ajustes + login/auth de HaxBall en localStorage) se deriva
+// del nombre de la app. Para NO perderlos al renombrar, se fija a mano la carpeta
+// que ya se venia usando (la primera que exista) antes de que arranque la app.
+(() => {
+  try {
+    const base = app.getPath('appData');
+    const candidates = ['haxball-client', 'HaxBall Client', 'TL App'];
+    const found = candidates.find((n) => fs.existsSync(path.join(base, n)));
+    const dir = path.join(base, found || 'haxball-client');
+    app.setPath('userData', dir);
+    // copia de seguridad unica de los ajustes antes del cambio de nombre
+    const prefs = path.join(dir, 'preferences.json');
+    const bak = path.join(dir, 'preferences.backup-pre-tlapp.json');
+    if (fs.existsSync(prefs) && !fs.existsSync(bak)) fs.copyFileSync(prefs, bak);
+  } catch (e) {
+    console.error('No se pudo fijar userData', e);
+  }
+  app.setName('TL App');
+})();
+
 const rpcClientId = "1391027232352501841";
 const rpc = new DiscordRPC.Client({ transport: 'ipc' });
 rpc.on('ready', () => {
@@ -177,7 +198,8 @@ const createWindow = () => {
       nodeIntegration: false,
       backgroundThrottling: !preferences.low_latency
     },
-    title: "HaxBall Client by og"
+    title: "TL App",
+    icon: path.join(__dirname, 'assets', 'icon.png')
   });
   
   // La extension "All-in-one Tool" mete scripts en la pagina; se puede apagar
@@ -186,6 +208,12 @@ const createWindow = () => {
     const extensionPath = path.join(__dirname, 'inject', 'Haxball-Room-Extension');
     win.webContents.session.loadExtension(extensionPath);
   }
+
+  // El titulo de la ventana/barra de tareas siempre es "TL App" (la pagina intenta poner "HaxBall")
+  win.on('page-title-updated', (e) => {
+    e.preventDefault();
+    win.setTitle('TL App');
+  });
 
   win.loadURL('https://www.haxball.com/play');
 
@@ -391,18 +419,8 @@ ipcMain.on('update-discord-rpc', (_event, details) => {
   const activity = {
     details: details,
     largeImageKey: 'client-logo',
-    largeImageText: 'HaxBall Client by og',
+    largeImageText: 'TL App',
     startTimestamp: Date.now(),
-    buttons: [
-      {
-          label: 'Download Client',
-          url:'https://oghb.github.io/haxball-client/'
-      },
-      {
-          label: 'Join Discord',
-          url:'https://discord.gg/zDzYamtcfX'
-      }
-    ]
   }
 
   rpc.setActivity(activity).catch((err) => {

@@ -28,7 +28,15 @@ const walk = (node: Element, depth: number, lines: string[]): void => {
 	if (SKIP_TAGS.has(node.tagName.toUpperCase())) return;
 	const id = node.id || "";
 	if (id.startsWith("hax-")) return; // el propio panel del cliente
-	lines.push("  ".repeat(depth) + describe(node));
+	let line = "  ".repeat(depth) + describe(node);
+	if (depth <= 2) {
+		try {
+			const cs = (node.ownerDocument.defaultView as Window).getComputedStyle(node);
+			const img = cs.backgroundImage !== "none" ? ` img=${cs.backgroundImage.slice(0, 40)}` : "";
+			line += `  {bg ${cs.backgroundColor}${img}}`; // sirve para ubicar el pasto verde
+		} catch { /* sin acceso */ }
+	}
+	lines.push(line);
 	for (const child of Array.from(node.children)) walk(child, depth + 1, lines);
 };
 

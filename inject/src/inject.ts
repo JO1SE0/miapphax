@@ -6,6 +6,7 @@ import { exportCurrentProfile, loadProfileToLocalStorage, Profile } from "./prof
 import { startLinesWatcher } from "./lines";
 import { startThemeWatcher } from "./theme";
 import { startPanel } from "./panel";
+import { startBackgroundWatcher } from "./bg";
 
 async function init() {    
     // remove ads, modify header, add command bar
@@ -51,6 +52,7 @@ async function init() {
 
     // barra lateral con paneles de personalizacion (F9 la oculta / muestra)
     startPanel();
+    startBackgroundWatcher();
 
     try {
         const targetElement = await waitForElement("div[class$='view']");

@@ -7,7 +7,9 @@ import { URL } from "../constants";
 const aboutAlert = (): void => {
     customAlert(
         "About",
-        `This app was developed by <b>@og9525</b> to improve the HaxBall experience, while keeping it faithful to the original.
+        `<b>TL App</b> — cliente personal de HaxBall para Toda la Lecce.
+
+        Basado en el cliente open source de <b>@og9525</b> (GPL-3.0).
 
         Unlike similar projects, it is open source and downloadable without any registration.
 
@@ -211,7 +213,7 @@ export const setupCustomHeader = async (): Promise<void> => {
     titleSpan.classList.add("title");
     const titleLink = document.createElement("a");
     // titleLink.href = "https://www.haxball.com/play";
-    titleLink.textContent = "HaxBall Client by og";
+    titleLink.textContent = "TL App";
     titleSpan.appendChild(titleLink);
 
     const about = document.createElement("a");

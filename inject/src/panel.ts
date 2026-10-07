@@ -3,6 +3,8 @@
 // F9 la muestra / oculta. Por defecto se oculta sola dentro de una sala.
 
 import { getLinesConfig, updateLinesLive } from "./lines";
+import { BRAND_LOGO } from "./brand";
+import { refreshBackground } from "./bg";
 import { openSettingsAlert } from "./settings";
 import { CLUB_THEME, PRESETS, getThemeConfig, isValidHex, updateThemeLive } from "./theme";
 import { copyToClipboard, dumpUiStructure } from "./uidump";
@@ -263,7 +265,7 @@ const buildLook = async (): Promise<HTMLElement> => {
 		"Espacio entre filas y bloques"));
 
 	box.appendChild(group("Tema del club"));
-	const club = el("button", "hx-btn", "Giallorossi (rojo y amarillo)");
+	const club = el("button", "hx-btn", "Toda la Lecce (colores del escudo)");
 	club.style.width = "100%";
 	club.addEventListener("click", () => {
 		updateThemeLive({ accent: CLUB_THEME.accent, accent2: CLUB_THEME.accent2, glow: "", enabled: true });
@@ -352,6 +354,21 @@ const buildPitch = async (): Promise<HTMLElement> => {
 	const box = el("div");
 	box.appendChild(el("h2", "", "Cancha y lineas"));
 	box.appendChild(el("p", "hx-sub", "Se ve al entrar a una sala. F8 prende y apaga las lineas finas."));
+
+	box.appendChild(group("Fondo de afuera"));
+	box.appendChild(switchRow("Degradé en vez del pasto verde", "Menu de salas y borde de la sala (al apretar ESC), con los colores del escudo", l.bgEnabled, (on) => {
+		updateLinesLive({ bgEnabled: on });
+		SAVE("bg_enabled", on);
+		refreshBackground();
+	}));
+	box.appendChild(colorRow("Color de arriba", l.bgFrom,
+		(hex) => { updateLinesLive({ bgFrom: hex, bgEnabled: true }); refreshBackground(); },
+		(hex) => { SAVE("bg_from", hex); SAVE("bg_enabled", true); },
+		undefined, undefined, "Por defecto: azul del escudo"));
+	box.appendChild(colorRow("Color de abajo", l.bgTo,
+		(hex) => { updateLinesLive({ bgTo: hex, bgEnabled: true }); refreshBackground(); },
+		(hex) => { SAVE("bg_to", hex); SAVE("bg_enabled", true); },
+		undefined, undefined, "Por defecto: azul oscuro"));
 
 	box.appendChild(group("Textura"));
 	box.appendChild(switchRow("Cancha plana", "Sin textura de pasto ni cemento", l.flatPitch, (on) => {
@@ -595,7 +612,7 @@ function buildLogoRow(): HTMLDivElement {
 	const clear = el("button", "hx-btn ghost", "Quitar");
 	clear.addEventListener("click", () => {
 		SAVE("club_logo", "");
-		setLogo("");
+		setLogo(BRAND_LOGO);
 		refreshPreview();
 	});
 
@@ -618,12 +635,12 @@ function buildLogoRow(): HTMLDivElement {
 export const startPanel = async (): Promise<void> => {
 	if (document.getElementById(ROOT_ID)) return;
 
-	let logo = "";
+	let logo = BRAND_LOGO;
 	try {
 		const prefs = await window.electronAPI.getAppPreferences();
 		hoverEnabled = prefs?.panel_hover ?? true;
 		hoverInGame = prefs?.panel_hover_ingame ?? false;
-		logo = typeof prefs?.club_logo === "string" ? prefs.club_logo : "";
+		logo = typeof prefs?.club_logo === "string" && prefs.club_logo ? prefs.club_logo : BRAND_LOGO;
 	} catch { /* valores por defecto */ }
 
 	const style = document.createElement("style");

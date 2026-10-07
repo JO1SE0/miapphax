@@ -24,6 +24,9 @@ export type LinesConfig = {
 	flatPitch: boolean; // cancha sin textura
 	flatColor: string; // "" = automatico (promedio de la textura)
 	desync: boolean; // canvas de baja latencia (solo salas nuevas)
+	bgEnabled: boolean; // degradé en vez del pasto verde de afuera
+	bgFrom: string;
+	bgTo: string;
 };
 
 // Valores originales del juego (tambien son los que se usan al apagar el modo).
@@ -45,6 +48,21 @@ export const DEFAULT_CONFIG: LinesConfig = {
 	flatPitch: false,
 	flatColor: "",
 	desync: false,
+	bgEnabled: true,
+	bgFrom: "#203860",
+	bgTo: "#08101f",
+};
+
+// ¿Es un color de texto tipo pasto (verde)? Los patrones se detectan aparte.
+const isGreenish = (style: any): boolean => {
+	if (typeof style !== "string") return false;
+	let r = 0, g = 0, b = 0;
+	const hex = style.trim().match(/^#([0-9a-f]{6})$/i);
+	const rgb = style.match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/i);
+	if (hex) { r = parseInt(hex[1].slice(0, 2), 16); g = parseInt(hex[1].slice(2, 4), 16); b = parseInt(hex[1].slice(4), 16); }
+	else if (rgb) { r = +rgb[1]; g = +rgb[2]; b = +rgb[3]; }
+	else return false;
+	return g > r + 12 && g > b + 12;
 };
 
 const PATCH_FLAG = "__haxLinesPatched";
@@ -188,6 +206,29 @@ export const installLinePatch = (win: any): boolean => {
 		};
 		if (typeof originalFillRect === "function") {
 			proto.fillRect = function (this: any, ...args: any[]) {
+				// Fondo de afuera de la cancha: rect completo del canvas relleno con pasto.
+				const cfg: LinesConfig | undefined = win[CONFIG_KEY];
+				const canvas = this.canvas;
+				if (
+					cfg?.bgEnabled &&
+					canvas &&
+					args[0] === 0 &&
+					args[1] === 0 &&
+					args[2] >= canvas.width &&
+					args[3] >= canvas.height &&
+					(textures.has(this.fillStyle) || isGreenish(this.fillStyle))
+				) {
+					const style = this.fillStyle;
+					const g = this.createLinearGradient(0, 0, canvas.width * 0.35, canvas.height);
+					g.addColorStop(0, cfg.bgFrom);
+					g.addColorStop(1, cfg.bgTo);
+					this.fillStyle = g;
+					try {
+						return originalFillRect.apply(this, args);
+					} finally {
+						this.fillStyle = style;
+					}
+				}
 				return withFlatFill(this, () => originalFillRect.apply(this, args));
 			};
 		}
@@ -234,6 +275,9 @@ const readConfigFromPrefs = (prefs: any): LinesConfig => ({
 	flatPitch: prefs?.pitch_flat ?? DEFAULT_CONFIG.flatPitch,
 	flatColor: typeof prefs?.pitch_flat_color === "string" ? prefs.pitch_flat_color : "",
 	desync: prefs?.canvas_desync ?? DEFAULT_CONFIG.desync,
+	bgEnabled: prefs?.bg_enabled ?? DEFAULT_CONFIG.bgEnabled,
+	bgFrom: /^#[0-9a-f]{6}$/i.test(prefs?.bg_from) ? prefs.bg_from : DEFAULT_CONFIG.bgFrom,
+	bgTo: /^#[0-9a-f]{6}$/i.test(prefs?.bg_to) ? prefs.bg_to : DEFAULT_CONFIG.bgTo,
 });
 
 const getGameWindow = (): any => {
