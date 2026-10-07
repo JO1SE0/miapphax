@@ -408,6 +408,25 @@ const buildSettings = async (): Promise<HTMLElement> => {
 	open.style.width = "100%";
 	open.addEventListener("click", () => { closeDrawer(); openSettingsAlert(); });
 	box.appendChild(open);
+	box.appendChild(group("Discord"));
+	box.appendChild(el("p", "hx-sub", "Para que Discord diga TL App: crea una aplicacion llamada TL App en discord.com/developers, subi tu logo como 'client-logo' en Rich Presence > Art Assets y pega aca el Application ID. Reinicia la app despues."));
+	let currentId = "";
+	try { currentId = String((await window.electronAPI.getAppPreferences())?.discord_client_id || ""); } catch { /* vacio */ }
+	const idInput = document.createElement("input");
+	idInput.type = "text";
+	idInput.placeholder = "Application ID (solo numeros)";
+	idInput.value = currentId;
+	idInput.style.cssText = "width:100%;box-sizing:border-box;padding:8px 10px;margin-top:6px;font-size:13px;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);";
+	const idMsg = el("p", "hx-sub", "");
+	idInput.addEventListener("change", () => {
+		const v = idInput.value.trim();
+		if (v && !/^\d{15,25}$/.test(v)) { idMsg.textContent = "Id invalido: son solo numeros (17 a 20 digitos)."; return; }
+		SAVE("discord_client_id", v);
+		idMsg.textContent = v ? "Guardado. Reinicia la app para aplicarlo." : "Borrado: usa la aplicacion original.";
+	});
+	idInput.addEventListener("keydown", (e) => e.stopPropagation());
+	box.appendChild(idInput);
+	box.appendChild(idMsg);
 	box.appendChild(group("Depuracion"));
 	const dump = el("button", "hx-btn ghost", "Copiar estructura de la UI");
 	dump.style.width = "100%";
