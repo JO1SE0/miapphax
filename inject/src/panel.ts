@@ -4,6 +4,7 @@
 
 import { getLinesConfig, updateLinesLive } from "./lines";
 import { BRAND_LOGO } from "./brand";
+import { getFx, showGoal, updateFx } from "./fx";
 import { getExtras, getTeamPresent, playSound, rejoinLastRoom, sendChat, showToast, updateExtras } from "./extras";
 import { refreshBackground } from "./bg";
 import { openSettingsAlert } from "./settings";
@@ -364,6 +365,11 @@ const buildPitch = async (): Promise<HTMLElement> => {
 		SAVE("bg_enabled", on);
 		refreshBackground();
 	}));
+	box.appendChild(switchRow("Escudo tenue en el fondo", "Tu escudo muy suave detras del menu", l.bgCrest, (on) => {
+		updateLinesLive({ bgCrest: on });
+		SAVE("bg_crest", on);
+		refreshBackground();
+	}));
 	box.appendChild(switchRow("Degradé en movimiento", "Se mueve despacio en el menu. Se apaga solo con Low Latency", l.bgAnim, (on) => {
 		updateLinesLive({ bgAnim: on });
 		SAVE("bg_anim", on);
@@ -504,10 +510,12 @@ const textArea = (value: string, rows: number, placeholder: string): HTMLTextAre
 	return area;
 };
 
-const soundPicker = (label: string, kind: "mention" | "msg", prefKey: string): HTMLElement => {
+const soundPicker = (label: string, kind: "mention" | "msg" | "goal", prefKey: string): HTMLElement => {
+	const urlKey = kind === "mention" ? "mentionUrl" : kind === "goal" ? "goalUrl" : "msgUrl";
+	const defaultText = kind === "goal" ? "Sin sonido propio (suena el del juego)" : "Sonido generado por la app";
 	const wrap = el("div");
 	wrap.style.cssText = "display:flex;flex-direction:column;gap:6px;padding:6px 0;";
-	const status = el("div", "hx-hint", getExtras()[kind === "mention" ? "mentionUrl" : "msgUrl"] ? "Sonido propio cargado" : "Sonido generado por la app");
+	const status = el("div", "hx-hint", getExtras()[urlKey] ? "Sonido propio cargado" : defaultText);
 	wrap.appendChild(labelBlock(label));
 	wrap.appendChild(status);
 	const buttons = el("div", "hx-swatches");
@@ -521,7 +529,7 @@ const soundPicker = (label: string, kind: "mention" | "msg", prefKey: string): H
 			if (!file) return;
 			try {
 				const url = await readSoundFile(file);
-				updateExtras(kind === "mention" ? { mentionUrl: url } : { msgUrl: url });
+				updateExtras({ [urlKey]: url });
 				SAVE(prefKey, url);
 				status.textContent = "Sonido propio cargado";
 				playSound(kind);
@@ -536,9 +544,9 @@ const soundPicker = (label: string, kind: "mention" | "msg", prefKey: string): H
 	test.addEventListener("click", () => playSound(kind));
 	const reset = el("button", "hx-btn ghost", "Quitar");
 	reset.addEventListener("click", () => {
-		updateExtras(kind === "mention" ? { mentionUrl: "" } : { msgUrl: "" });
+		updateExtras({ [urlKey]: "" });
 		SAVE(prefKey, "");
-		status.textContent = "Sonido generado por la app";
+		status.textContent = defaultText;
 	});
 	buttons.append(pick, test, reset);
 	wrap.appendChild(buttons);
@@ -568,7 +576,21 @@ const buildExtras = async (): Promise<HTMLElement> => {
 		(v) => updateExtras({ volume: v }), (v) => SAVE("x_snd_vol", v)));
 	box.appendChild(soundPicker("Sonido de mencion", "mention", "x_snd_mention"));
 	box.appendChild(soundPicker("Sonido de mensaje", "msg", "x_snd_msg"));
-	box.appendChild(el("p", "hx-sub", "Los sonidos del gol y de la patada vienen dentro del juego y todavia no los puedo reemplazar."));
+	box.appendChild(soundPicker("Sonido de gol (se suma al del juego)", "goal", "x_snd_goal"));
+	box.appendChild(el("p", "hx-sub", "El sonido original del gol y de la patada viene dentro del juego y no lo puedo reemplazar: el tuyo suena ademas del original."));
+
+	box.appendChild(group("Efectos"));
+	box.appendChild(el("p", "hx-sub", "Se apagan solos con Low Latency (ahi se evita todo dibujo extra)."));
+	const fx = getFx();
+	box.appendChild(switchRow("Efectos activados", "Interruptor general", fx.enabled, (on) => { updateFx({ enabled: on }); SAVE("fx_enabled", on); }));
+	box.appendChild(switchRow("Banner de gol", "Cartel animado con destello del color del equipo", fx.banner, (on) => { updateFx({ banner: on }); SAVE("fx_banner", on); }));
+	box.appendChild(switchRow("Camara lenta falsa", "Vineta oscura y un zoom corto despues del gol (solo visual)", fx.cinematic, (on) => { updateFx({ cinematic: on }); SAVE("fx_cinematic", on); }));
+	box.appendChild(switchRow("Borde en los ultimos segundos", "El borde de la pantalla late en rojo al final del partido", fx.edge, (on) => { updateFx({ edge: on }); SAVE("fx_edge", on); }));
+	box.appendChild(switchRow("Entrada animada", "Pantalla de bienvenida con el escudo al abrir la app", fx.splash, (on) => { updateFx({ splash: on }); SAVE("fx_splash", on); }));
+	const demo = el("button", "hx-btn ghost", "Probar efecto de gol");
+	demo.style.width = "100%";
+	demo.addEventListener("click", () => showGoal("red", 1, 0));
+	box.appendChild(demo);
 
 	box.appendChild(group("Plantillas de mensajes (Alt + 1 a 9)"));
 	box.appendChild(el("p", "hx-sub", "Un mensaje por linea. Alt+1 manda la primera, Alt+2 la segunda, etc. (hasta 9)."));

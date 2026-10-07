@@ -31,6 +31,7 @@ export type LinesConfig = CosConfig & {
 	bgFrom: string;
 	bgTo: string;
 	bgAnim: boolean; // degradé que se mueve despacio
+	bgCrest: boolean; // escudo muy tenue en el fondo del menu
 };
 
 // Valores originales del juego (tambien son los que se usan al apagar el modo).
@@ -56,6 +57,7 @@ export const DEFAULT_CONFIG: LinesConfig = {
 	bgFrom: "#203860",
 	bgTo: "#08101f",
 	bgAnim: false,
+	bgCrest: true,
 	...COS_DEFAULTS,
 };
 
@@ -292,6 +294,7 @@ const readConfigFromPrefs = (prefs: any): LinesConfig => ({
 	bgFrom: /^#[0-9a-f]{6}$/i.test(prefs?.bg_from) ? prefs.bg_from : DEFAULT_CONFIG.bgFrom,
 	bgTo: /^#[0-9a-f]{6}$/i.test(prefs?.bg_to) ? prefs.bg_to : DEFAULT_CONFIG.bgTo,
 	bgAnim: prefs?.bg_anim === true,
+	bgCrest: prefs?.bg_crest ?? true,
 	wmEnabled: prefs?.wm_enabled === true,
 	wmOpacity: Math.min(0.5, Math.max(0.02, Number(prefs?.wm_opacity) || COS_DEFAULTS.wmOpacity)),
 	wmSize: Math.min(400, Math.max(60, Number(prefs?.wm_size) || COS_DEFAULTS.wmSize)),

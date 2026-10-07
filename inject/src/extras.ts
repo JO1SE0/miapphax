@@ -14,6 +14,7 @@ export type ExtrasConfig = {
 	msgSound: boolean;
 	mentionUrl: string; // sonido propio ("" = el generado)
 	msgUrl: string;
+	goalUrl: string; // sonido propio que suena al meter un gol (se suma al del juego)
 	volume: number; // 0..1
 	templates: string[];
 	team: string[];
@@ -27,6 +28,7 @@ export const EXTRAS_DEFAULTS: ExtrasConfig = {
 	msgSound: false,
 	mentionUrl: "",
 	msgUrl: "",
+	goalUrl: "",
 	volume: 0.6,
 	templates: ["gg", "buena!", "pasala", "defensa!", "ya vuelvo"],
 	team: [],
@@ -50,6 +52,7 @@ export const readExtras = (prefs: any): ExtrasConfig => {
 		msgSound: prefs?.x_msg_sound ?? EXTRAS_DEFAULTS.msgSound,
 		mentionUrl: typeof prefs?.x_snd_mention === "string" ? prefs.x_snd_mention : "",
 		msgUrl: typeof prefs?.x_snd_msg === "string" ? prefs.x_snd_msg : "",
+		goalUrl: typeof prefs?.x_snd_goal === "string" ? prefs.x_snd_goal : "",
 		volume: Number.isFinite(vol) ? Math.min(1, Math.max(0, vol)) : EXTRAS_DEFAULTS.volume,
 		templates: arr(prefs?.x_templates, EXTRAS_DEFAULTS.templates).slice(0, 9),
 		team: arr(prefs?.x_team, []),
@@ -108,17 +111,18 @@ const beep = (kind: "mention" | "msg"): void => {
 	} catch { /* sin audio */ }
 };
 
-export const playSound = (kind: "mention" | "msg"): void => {
-	const url = kind === "mention" ? cfg.mentionUrl : cfg.msgUrl;
+export const playSound = (kind: "mention" | "msg" | "goal"): void => {
+	const url = kind === "mention" ? cfg.mentionUrl : kind === "goal" ? cfg.goalUrl : cfg.msgUrl;
+	if (kind === "goal" && !url) return; // el de gol solo suena si cargaste uno
 	if (url) {
 		try {
 			const audio = new Audio(url);
 			audio.volume = cfg.volume;
-			void audio.play().catch(() => beep(kind));
+			void audio.play().catch(() => { if (kind !== "goal") beep(kind); });
 			return;
 		} catch { /* cae al generado */ }
 	}
-	beep(kind);
+	if (kind !== "goal") beep(kind);
 };
 
 // ---- estilos dentro del iframe ------------------------------------------------

@@ -5,7 +5,32 @@
 // (pasto). Se marcan con data-hx-bg y una regla CSS les pone el degradé.
 // Lo de adentro de la sala (canvas) lo resuelve lines.ts.
 
+import { BRAND_LOGO } from "./brand";
 import { getLinesConfig } from "./lines";
+
+// Escudo al 7% de opacidad como imagen de fondo (se genera una vez por escudo).
+let crestSrc = "";
+let crestUrl = "";
+const prepareCrest = (src: string): void => {
+	if (crestSrc === src) return;
+	crestSrc = src;
+	crestUrl = "";
+	const img = new Image();
+	img.onload = () => {
+		try {
+			const size = 512;
+			const canvas = document.createElement("canvas");
+			canvas.width = canvas.height = size;
+			const ctx = canvas.getContext("2d");
+			if (!ctx) return;
+			const k = Math.min(size / img.width, size / img.height);
+			ctx.globalAlpha = 0.07;
+			ctx.drawImage(img, (size - img.width * k) / 2, (size - img.height * k) / 2, img.width * k, img.height * k);
+			if (crestSrc === src) crestUrl = canvas.toDataURL("image/png");
+		} catch { /* imagen no disponible */ }
+	};
+	img.src = src;
+};
 
 const STYLE_ID = "hax-bg-style";
 const ATTR = "data-hx-bg";
@@ -21,17 +46,19 @@ const isGreen = (css: string): boolean => {
 
 const hasImage = (css: string): boolean => /url\(/i.test(css);
 
-const ensureStyle = (doc: Document, from: string, to: string, anim: boolean): void => {
+const ensureStyle = (doc: Document, from: string, to: string, anim: boolean, crest: string): void => {
 	let style = doc.getElementById(STYLE_ID) as HTMLStyleElement | null;
 	if (!style) {
 		style = doc.createElement("style");
 		style.id = STYLE_ID;
 		(doc.head || doc.documentElement).appendChild(style);
 	}
+	const layer = crest ? `url("${crest}") center / min(58vmin, 520px) no-repeat, ` : "";
+	const sizes = crest ? "min(58vmin, 520px) min(58vmin, 520px), " : "";
 	const css = anim
-		? `[${ATTR}] { background: linear-gradient(135deg, ${from}, ${to}, ${from}) !important; background-size: 300% 300% !important; animation: hxbgmove 26s ease-in-out infinite; }
-@keyframes hxbgmove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }`
-		: `[${ATTR}] { background: linear-gradient(160deg, ${from}, ${to}) fixed !important; background-size: cover !important; }`;
+		? `[${ATTR}] { background: ${layer}linear-gradient(135deg, ${from}, ${to}, ${from}) !important; background-size: ${sizes}300% 300% !important; animation: hxbgmove 26s ease-in-out infinite; }
+@keyframes hxbgmove { 0%, 100% { background-position: ${crest ? "center, " : ""}0% 50%; } 50% { background-position: ${crest ? "center, " : ""}100% 50%; } }`
+		: `[${ATTR}] { background: ${layer}linear-gradient(160deg, ${from}, ${to}) !important; background-attachment: fixed !important; background-size: ${crest ? "min(58vmin, 520px) min(58vmin, 520px), cover" : "cover"} !important; }`;
 	if (style.textContent !== css) style.textContent = css;
 };
 
@@ -68,14 +95,14 @@ const scan = (doc: Document): void => {
 	}
 };
 
-const apply = (doc: Document | null | undefined, on: boolean, from: string, to: string, anim: boolean): void => {
+const apply = (doc: Document | null | undefined, on: boolean, from: string, to: string, anim: boolean, crest: string): void => {
 	try {
 		if (!doc?.body) return;
 		if (!on) {
 			if (doc.getElementById(STYLE_ID)) clear(doc);
 			return;
 		}
-		ensureStyle(doc, from, to, anim);
+		ensureStyle(doc, from, to, anim, crest);
 		scan(doc);
 	} catch {
 		/* iframe sin acceso */
@@ -84,10 +111,12 @@ const apply = (doc: Document | null | undefined, on: boolean, from: string, to: 
 
 export const refreshBackground = (): void => {
 	const cfg = getLinesConfig();
-	apply(document, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim);
+	prepareCrest(cfg.wmLogo || BRAND_LOGO);
+	const crest = cfg.bgCrest ? crestUrl : "";
+	apply(document, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim, crest);
 	try {
 		const frame = document.getElementsByClassName("gameframe")[0] as HTMLIFrameElement | undefined;
-		apply(frame?.contentDocument, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim);
+		apply(frame?.contentDocument, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim, crest);
 	} catch {
 		/* sin acceso */
 	}
