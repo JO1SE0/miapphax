@@ -59,13 +59,13 @@ export const addAddressBarToHeader = (): void => {
 
     const addressInput = document.createElement("input");
     addressInput.type = "text";
-    addressInput.placeholder = "Enter a room link";
+    addressInput.placeholder = "Pega el link de una sala";
     addressInput.classList.add("address-bar-input");
 
     // Base styles
-    addressInput.style.backgroundColor = "black";
+    addressInput.style.backgroundColor = "rgba(8, 16, 31, 0.7)";
     addressInput.style.color = "white";
-    addressInput.style.border = "1px solid #444";
+    addressInput.style.border = "1px solid rgba(208, 184, 120, 0.25)";
     addressInput.style.borderRadius = "6px";
     addressInput.style.padding = "2px 6px";
     addressInput.style.width = "200px";
@@ -79,8 +79,8 @@ export const addAddressBarToHeader = (): void => {
     // Focus effect
     addressInput.addEventListener("focus", () => {
         addressInput.style.width = "100%";
-		addressInput.style.border = "2px solid #b3413b";
-        addressInput.style.boxShadow = "0 0 6px rgba(179, 65, 59, 0.3)"; // subtle glow
+		addressInput.style.border = "2px solid #d0b878";
+        addressInput.style.boxShadow = "0 0 10px rgba(208, 184, 120, 0.35)"; // subtle glow
     });
 
     // Blur effect
@@ -88,7 +88,7 @@ export const addAddressBarToHeader = (): void => {
 		if (addressInput.value === "") {
 			addressInput.style.width = "200px";
 		}
-		addressInput.style.border = "1px solid #444";
+		addressInput.style.border = "1px solid rgba(208, 184, 120, 0.25)";
 		addressInput.style.boxShadow = "none";
 	});
 
@@ -102,7 +102,7 @@ export const addAddressBarToHeader = (): void => {
 		} else if (isValid) {
 			addressInput.style.color = "white"; // Valid input stays white
 		} else {
-			addressInput.style.color = "rgba(179, 65, 59, 0.8)"; // Invalid = red text
+			addressInput.style.color = "rgba(255, 110, 110, 0.9)"; // Invalid = red text
 		}
 	});
 
@@ -127,20 +127,20 @@ export const addAddressBarToHeader = (): void => {
 
     // Expose a global function to trigger shake (for validation error)
     (window as any).triggerInvalidInput = (input: string) => {
-		addressInput.placeholder = "Invalid room link!"
+		addressInput.placeholder = "Link invalido"
 		addressInput.value = "";
 		// Inject a <style> tag dynamically
 		const style = document.createElement("style");
 		style.textContent = `
 			.address-bar-input::placeholder {
-				color: rgba(179, 65, 59, 1) !important;
+				color: rgba(255, 110, 110, 1) !important;
 				opacity: 0.8;
 			}
 		`;
 		document.head.appendChild(style);
         addressInput.classList.add("shake");
         setTimeout(() => {
-			addressInput.placeholder = "Enter a room link"
+			addressInput.placeholder = "Pega el link de una sala"
 			addressInput.value = input;
             addressInput.classList.remove("shake");
 			document.head.removeChild(style);
@@ -155,7 +155,7 @@ export const addAddressBarToHeader = (): void => {
 	
 			if (isValid) {
                 addressInput.value = ""
-                addressInput.placeholder = "Joining room..."
+                addressInput.placeholder = "Entrando a la sala..."
 				setTimeout(() => {
                     window.location.href = roomLink;
                 }, 1000)
@@ -187,6 +187,7 @@ export const setupCustomHeader = async (): Promise<void> => {
     header.style.display = "grid";
     header.style.gridTemplateColumns = "1fr 1fr 1fr"; // 3 equal parts
     header.style.alignItems = "center";
+    header.classList.add("tl-header");
     header.style.width = "100%";
 
     const leftContainer = document.createElement("div");
@@ -215,44 +216,15 @@ export const setupCustomHeader = async (): Promise<void> => {
     const titleLink = document.createElement("a");
     // titleLink.href = "https://www.haxball.com/play";
     titleLink.textContent = "TL App";
+    titleLink.classList.add("tl-wordmark");
     const crest = document.createElement("img");
     crest.src = BRAND_LOGO;
     crest.alt = "";
-    crest.style.cssText = "height:22px;width:22px;object-fit:contain;vertical-align:middle;margin-right:8px;";
+    crest.classList.add("tl-crest");
     titleSpan.appendChild(crest);
     titleSpan.appendChild(titleLink);
 
-    const about = document.createElement("a");
-    about.textContent = "About";
-    about.href = "";
-    about.style.marginLeft = "15px";
-    about.addEventListener("click", function (event) {
-        event.preventDefault(); // Prevent the link from navigating
-        aboutAlert();
-    });
-
-    const help = document.createElement("a");
-    help.textContent = "Help";
-    help.href = "";
-    help.style.marginLeft = "15px";
-    help.addEventListener("click", function (event) {
-        event.preventDefault(); // Prevent the link from navigating
-        helpAlert();
-    });
-
-    const preferences = document.createElement("a");
-    preferences.textContent = "Settings";
-    preferences.href = "";
-    preferences.style.marginLeft = "15px";
-    preferences.addEventListener("click", function (event) {
-        event.preventDefault(); // Prevent the link from navigating
-        openSettingsAlert();
-    });
-
     leftContainer.appendChild(titleSpan);
-    leftContainer.appendChild(about);
-    leftContainer.appendChild(help);
-    leftContainer.appendChild(preferences);
 
     const currentProfileId = localStorage.getItem("current_profile") || "default";
     localStorage.setItem("current_profile", currentProfileId)
@@ -304,7 +276,7 @@ export const toggleHeaderVisibility = (): void => {
     if (!isVisible) {
         // Show header
         localStorage.setItem("header_visible", "true")
-        header.style.height = "35px";
+        header.style.height = "44px";
 
         // Remove arrow if it exists
         if (existingArrow) {
@@ -315,39 +287,6 @@ export const toggleHeaderVisibility = (): void => {
         localStorage.setItem("header_visible", "false")
         header.style.height = "0px";
 
-        // Create arrow (if not already present)
-        if (!existingArrow) {
-            const arrow = document.createElement("div");
-            arrow.id = "header-toggle-arrow";
-            arrow.innerHTML = `
-                <i class="fa fa-arrow-circle-down" aria-hidden="true" style="margin-right: 5px;"></i> Show header
-            `;
-        
-            arrow.style.background = "rgba(26, 33, 37, 0.063)";
-            arrow.style.padding = "6px 10px";
-            arrow.style.borderRadius = "6px";
-            arrow.style.fontSize = "15px";
-            arrow.style.color = "white";
-            arrow.style.opacity = "0.8";
-            arrow.style.cursor = "pointer";
-            arrow.style.userSelect = "none";
-        
-            arrow.style.position = "fixed";
-            arrow.style.top = "5px";
-            arrow.style.left = "8px";
-            arrow.style.zIndex = "9999";
-        
-            // Optional hover effect
-            arrow.addEventListener("mouseenter", () => {
-                arrow.style.opacity = "1";
-            });
-            arrow.addEventListener("mouseleave", () => {
-                arrow.style.opacity = "0.8";
-            });
-        
-            arrow.addEventListener("click", toggleHeaderVisibility);
-        
-            setTimeout(() => {document.body.appendChild(arrow)}, 300)
-        }
+        // (sin cartel "Show header": la barra vuelve sola al salir de la sala; H la alterna)
     }
 };

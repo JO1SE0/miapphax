@@ -129,8 +129,8 @@ const ensureStyle = (doc: Document): void => {
 	const style = doc.createElement("style");
 	style.id = STYLE_ID;
 	style.textContent = `
-.log-contents p.hx-mention { background: rgba(248, 232, 0, 0.14) !important; border-left: 3px solid #f8e800; padding-left: 6px; border-radius: 4px; }
-.player-list-item.hx-team { box-shadow: inset 3px 0 0 #f8e800; }
+.log-contents p.hx-mention { background: rgba(208, 184, 120, 0.16) !important; border-left: 3px solid #d0b878; padding-left: 6px; border-radius: 4px; }
+.player-list-item.hx-team { box-shadow: inset 3px 0 0 #d0b878; }
 `;
 	(doc.head || doc.documentElement).appendChild(style);
 };

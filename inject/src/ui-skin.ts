@@ -27,10 +27,10 @@ export const buildSkinCss = (o: SkinOptions): string => {
 	const blur = o.lowGpu || style !== "glass" ? 0 : 14;
 
 	const cardBg =
-		style === "glass" ? "rgba(17, 21, 28, 0.80)" : style === "solid" ? "#12161d" : "rgba(255, 255, 255, 0.03)";
-	const border = style === "flat" ? "transparent" : "rgba(255, 255, 255, 0.08)";
+		style === "glass" ? "rgba(13, 24, 46, 0.82)" : style === "solid" ? "#0e1a31" : "rgba(255, 255, 255, 0.03)";
+	const border = style === "flat" ? "transparent" : "rgba(208, 184, 120, 0.18)";
 	const shadow = style === "flat" ? "none" : "0 12px 40px rgba(0, 0, 0, 0.45)";
-	const inner = style === "solid" ? "#0e1218" : "rgba(255, 255, 255, 0.04)";
+	const inner = style === "solid" ? "#0a1426" : "rgba(208, 184, 120, 0.05)";
 
 	return `
 :root {
@@ -40,7 +40,11 @@ export const buildSkinCss = (o: SkinOptions): string => {
 	--hx-blur: ${blur}px;
 	--hx-inner: ${inner};
 	--hx-d: ${d};
-	--hx-font: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, -apple-system, Roboto, sans-serif;
+	--hx-font: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+	--hx-font-display: Outfit, Inter, "Segoe UI", system-ui, sans-serif;
+	--hx-gold: #d0b878;
+	--hx-navy: #203860;
+	--hx-navy-deep: #08101f;
 }
 body { font-family: var(--hx-font) !important; }
 ${o.lowGpu ? "* { transition: none !important; animation: none !important; }" : ""}
@@ -55,7 +59,8 @@ button, input, select, textarea { font-family: inherit; }
 	-webkit-backdrop-filter: blur(var(--hx-blur));
 	backdrop-filter: blur(var(--hx-blur));
 }
-.dialog h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.dialog h1, h1, h2 { font-family: var(--hx-font-display) !important; font-weight: 700; letter-spacing: 0.01em; }
+.dialog h1 { font-size: 20px; color: var(--hx-gold); }
 .dialog hr { border: none; border-top: 1px solid var(--hx-card-border); }
 
 /* ---------- Sala del host (lobby) ---------- */
@@ -130,7 +135,7 @@ button, input, select, textarea { font-family: inherit; }
 	box-sizing: border-box;
 }
 .room-view .settings > div { padding-top: calc(4px * var(--hx-d)); padding-bottom: calc(4px * var(--hx-d)); }
-.room-view .settings .lbl { color: #aab2c0; }
+.room-view .settings .lbl { color: #b9c3d6; }
 .room-view .settings select { border: 1px solid var(--hx-card-border); background: rgba(0, 0, 0, 0.25); }
 
 /* botones de control del host */
@@ -139,8 +144,8 @@ button, input, select, textarea { font-family: inherit; }
 	font-weight: 700;
 	letter-spacing: 0.01em;
 }
-.room-view .controls button.green { background: linear-gradient(180deg, #3fbf6b, #2a9d55) !important; }
-.room-view .controls button.red { background: linear-gradient(180deg, #e0574f, #c43d36) !important; }
+.room-view .controls button.green { background: linear-gradient(180deg, #e2c987, #c2a35e) !important; color: #14213a !important; }
+.room-view .controls button.red { background: linear-gradient(180deg, #d0252d, #a8121a) !important; }
 .room-view .controls button.green:hover { filter: brightness(1.1); }
 .room-view .controls button.red:hover { filter: brightness(1.1); }
 
@@ -177,7 +182,43 @@ button, input, select, textarea { font-family: inherit; }
 	border: 1px solid var(--hx-card-border) !important;
 }
 
-/* ---------- Cabecera del cliente ---------- */
-.address-bar-input { border-radius: 999px !important; padding-left: 14px !important; }
+/* ---------- Cabecera del cliente (marca TL App) ---------- */
+.header.tl-header {
+	background: linear-gradient(180deg, #17294a 0%, #0c1830 100%) !important;
+	border-bottom: 1px solid rgba(208, 184, 120, 0.35);
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+	padding: 0 14px;
+	box-sizing: border-box;
+}
+.header.tl-header::after {
+	content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; pointer-events: none;
+	background: linear-gradient(90deg, transparent, var(--hx-gold), transparent); opacity: 0.8;
+}
+.header.tl-header .title, .header.tl-header .title a { text-decoration: none !important; background: none !important; }
+.tl-crest { height: 28px; width: 28px; object-fit: contain; vertical-align: middle; margin-right: 10px; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); }
+.tl-wordmark {
+	font-family: var(--hx-font-display) !important; font-weight: 800; font-size: 19px; letter-spacing: 0.14em; text-transform: uppercase;
+	vertical-align: middle;
+	background: linear-gradient(180deg, #ffffff 10%, var(--hx-gold) 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important;
+}
+.header.tl-header a { color: #dfe6f3; }
+.address-bar-input { border-radius: 999px !important; padding: 4px 14px !important; font-family: var(--hx-font) !important; font-size: 14px !important; }
+
+/* ---------- Detalles generales ---------- */
+::selection { background: rgba(208, 184, 120, 0.35); color: #fff; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(8, 16, 31, 0.6); }
+::-webkit-scrollbar-thumb { background: rgba(208, 184, 120, 0.35); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(208, 184, 120, 0.6); background-clip: padding-box; border: 2px solid transparent; }
+.dialog button, .roomlist-view button, .choose-nickname-view button, .settings-view button {
+	font-family: var(--hx-font); font-weight: 600; letter-spacing: 0.01em;
+	border: 1px solid rgba(208, 184, 120, 0.22) !important;
+}
+.dialog button:hover, .roomlist-view button:hover, .choose-nickname-view button:hover, .settings-view button:hover {
+	border-color: rgba(208, 184, 120, 0.6) !important; box-shadow: 0 0 14px rgba(208, 184, 120, 0.15);
+}
+.dialog input[type=text], .dialog select, .roomlist-view input[type=text], .roomlist-view select {
+	background: rgba(8, 16, 31, 0.55) !important; border: 1px solid rgba(208, 184, 120, 0.22) !important; color: #eef2fa;
+}
 `;
 };

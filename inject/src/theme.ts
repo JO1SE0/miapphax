@@ -30,8 +30,8 @@ export type ThemeConfig = {
 };
 
 // Tema del club "Toda la Lecce": colores del escudo (azul marino, amarillo, rojo, dorado)
-export const CLUB_THEME = { name: "Toda la Lecce", accent: "#2d4f8a", accent2: "#f8e800", red: "#e00810", gold: "#d0b878", navy: "#203860" };
-const LEGACY_CLUB = ["#d2232a|#f5c400"];
+export const CLUB_THEME = { name: "Toda la Lecce", accent: "#2d4f8a", accent2: "#d0b878", red: "#e00810", gold: "#d0b878", navy: "#203860" };
+const LEGACY_CLUB = ["#d2232a|#f5c400", "#2d4f8a|#f8e800"];
 
 // Acento que traia la version anterior; se usa para migrar a los que no lo cambiaron.
 const LEGACY_ACCENT = "#3b82f6";
@@ -316,6 +316,14 @@ export const applyThemeToDocument = (doc: Document | null | undefined): void => 
 	if (!current.enabled) {
 		modern?.remove();
 	} else if (versionChanged || !modern) {
+		if (!doc.getElementById("hax-font")) {
+			// tipografias (Outfit para titulos, Inter para el resto); si no cargan, cae a Segoe UI
+			const link = doc.createElement("link");
+			link.id = "hax-font";
+			link.rel = "stylesheet";
+			link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap";
+			doc.head.appendChild(link);
+		}
 		if (!modern) {
 			modern = doc.createElement("style");
 			modern.id = MODERN_STYLE_ID;
