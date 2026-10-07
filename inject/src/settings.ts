@@ -238,6 +238,31 @@ generalSection.appendChild(fpsRow);
 generalSection.appendChild(lowLatencyRow);
 generalSection.appendChild(discordRPCRow);
 
+	// Application ID de Discord propia (para que diga "TL App")
+	const rpcIdWrap = document.createElement('div');
+	rpcIdWrap.style.cssText = 'margin:10px 0;display:flex;flex-direction:column;gap:6px;';
+	const rpcIdLabel = document.createElement('div');
+	rpcIdLabel.textContent = 'Discord Application ID (para que diga TL App; reinicia la app despues)';
+	rpcIdLabel.style.cssText = 'font-size:13px;color:#ccc;';
+	const rpcIdInput = document.createElement('input');
+	rpcIdInput.type = 'text';
+	rpcIdInput.placeholder = 'Application ID (solo numeros)';
+	rpcIdInput.value = String(prefs["discord_client_id"] || '');
+	rpcIdInput.style.cssText = 'padding:8px 10px;font-size:13px;box-sizing:border-box;width:100%;user-select:text;';
+	const rpcIdMsg = document.createElement('div');
+	rpcIdMsg.style.cssText = 'font-size:12px;color:#aab2c0;';
+	const saveRpcId = () => {
+		const v = rpcIdInput.value.trim();
+		if (v && !/^\d{15,25}$/.test(v)) { rpcIdMsg.textContent = 'Id invalido: son solo numeros.'; return; }
+		window.electronAPI.setAppPreference('discord_client_id', v);
+		rpcIdMsg.textContent = v ? 'Guardado. Reinicia la app.' : 'Borrado: usa la aplicacion original.';
+	};
+	rpcIdInput.addEventListener('change', saveRpcId);
+	rpcIdInput.addEventListener('input', saveRpcId);
+	rpcIdInput.addEventListener('keydown', (e) => e.stopPropagation());
+	rpcIdWrap.append(rpcIdLabel, rpcIdInput, rpcIdMsg);
+	generalSection.appendChild(rpcIdWrap);
+
 	// -- Shortcuts Section --
 	const shortcutsSection = document.createElement('div');
 
