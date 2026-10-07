@@ -20,14 +20,17 @@ const isGreen = (css: string): boolean => {
 
 const hasImage = (css: string): boolean => /url\(/i.test(css);
 
-const ensureStyle = (doc: Document, from: string, to: string): void => {
+const ensureStyle = (doc: Document, from: string, to: string, anim: boolean): void => {
 	let style = doc.getElementById(STYLE_ID) as HTMLStyleElement | null;
 	if (!style) {
 		style = doc.createElement("style");
 		style.id = STYLE_ID;
 		(doc.head || doc.documentElement).appendChild(style);
 	}
-	const css = `[${ATTR}] { background: linear-gradient(160deg, ${from}, ${to}) fixed !important; background-size: cover !important; }`;
+	const css = anim
+		? `[${ATTR}] { background: linear-gradient(135deg, ${from}, ${to}, ${from}) !important; background-size: 300% 300% !important; animation: hxbgmove 26s ease-in-out infinite; }
+@keyframes hxbgmove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }`
+		: `[${ATTR}] { background: linear-gradient(160deg, ${from}, ${to}) fixed !important; background-size: cover !important; }`;
 	if (style.textContent !== css) style.textContent = css;
 };
 
@@ -62,14 +65,14 @@ const scan = (doc: Document): void => {
 	}
 };
 
-const apply = (doc: Document | null | undefined, on: boolean, from: string, to: string): void => {
+const apply = (doc: Document | null | undefined, on: boolean, from: string, to: string, anim: boolean): void => {
 	try {
 		if (!doc?.body) return;
 		if (!on) {
 			if (doc.getElementById(STYLE_ID)) clear(doc);
 			return;
 		}
-		ensureStyle(doc, from, to);
+		ensureStyle(doc, from, to, anim);
 		scan(doc);
 	} catch {
 		/* iframe sin acceso */
@@ -78,10 +81,10 @@ const apply = (doc: Document | null | undefined, on: boolean, from: string, to: 
 
 export const refreshBackground = (): void => {
 	const cfg = getLinesConfig();
-	apply(document, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo);
+	apply(document, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim);
 	try {
 		const frame = document.getElementsByClassName("gameframe")[0] as HTMLIFrameElement | undefined;
-		apply(frame?.contentDocument, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo);
+		apply(frame?.contentDocument, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim);
 	} catch {
 		/* sin acceso */
 	}

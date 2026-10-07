@@ -4,6 +4,7 @@
 
 import { getLinesConfig, updateLinesLive } from "./lines";
 import { BRAND_LOGO } from "./brand";
+import { getExtras, getTeamPresent, playSound, rejoinLastRoom, sendChat, showToast, updateExtras } from "./extras";
 import { refreshBackground } from "./bg";
 import { openSettingsAlert } from "./settings";
 import { CLUB_THEME, PRESETS, getThemeConfig, isValidHex, updateThemeLive } from "./theme";
@@ -13,12 +14,13 @@ const STYLE_ID = "hax-panel-style";
 const ROOT_ID = "hax-panel-root";
 const WIDTH = 72;
 
-type SectionId = "look" | "perf" | "pitch" | "settings";
+type SectionId = "look" | "perf" | "pitch" | "extras" | "settings";
 
 const ICONS: Record<SectionId, string> = {
 	look: '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/><path d="M12 21c-1.5 0-2-1.2-1.4-2.3.6-1 .2-2.2-1-2.2H8"/>',
 	perf: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
 	pitch: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/><circle cx="12" cy="12" r="3"/>',
+	extras: '<path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>',
 	settings: '<path d="M4 6h8m4 0h4M4 12h2m4 0h10M4 18h10m4 0h2"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
 };
 
@@ -26,6 +28,7 @@ const SECTIONS: { id: SectionId; label: string; title: string }[] = [
 	{ id: "look", label: "Aspecto", title: "Aspecto" },
 	{ id: "perf", label: "Rendim.", title: "Rendimiento" },
 	{ id: "pitch", label: "Cancha", title: "Cancha y lineas" },
+	{ id: "extras", label: "Extras", title: "Chat, equipo y salas" },
 	{ id: "settings", label: "Ajustes", title: "Ajustes" },
 ];
 
@@ -361,6 +364,11 @@ const buildPitch = async (): Promise<HTMLElement> => {
 		SAVE("bg_enabled", on);
 		refreshBackground();
 	}));
+	box.appendChild(switchRow("Degradé en movimiento", "Se mueve despacio en el menu. Se apaga solo con Low Latency", l.bgAnim, (on) => {
+		updateLinesLive({ bgAnim: on });
+		SAVE("bg_anim", on);
+		refreshBackground();
+	}));
 	box.appendChild(colorRow("Color de arriba", l.bgFrom,
 		(hex) => { updateLinesLive({ bgFrom: hex, bgEnabled: true }); refreshBackground(); },
 		(hex) => { SAVE("bg_from", hex); SAVE("bg_enabled", true); },
@@ -419,6 +427,14 @@ const buildPitch = async (): Promise<HTMLElement> => {
 		(hex) => updateLinesLive({ ballColor: hex }),
 		(hex) => SAVE("vis_ball_color", hex),
 		origBall, undefined, "Original = el del mapa"));
+	box.appendChild(switchRow("Marca de agua en la cancha", "Tu escudo (o el de TL) tenue en el centro del campo", l.wmEnabled, (on) => {
+		updateLinesLive({ wmEnabled: on });
+		SAVE("wm_enabled", on);
+	}));
+	box.appendChild(sliderRow("Opacidad de la marca", l.wmOpacity, 0.02, 0.5, 0.01, (v) => `${Math.round(v * 100)}%`,
+		(v) => updateLinesLive({ wmOpacity: v }), (v) => SAVE("wm_opacity", v)));
+	box.appendChild(sliderRow("Tamaño de la marca", l.wmSize, 60, 400, 10, (v) => `${Math.round(v)}`,
+		(v) => updateLinesLive({ wmSize: v }), (v) => SAVE("wm_size", v)));
 	box.appendChild(switchRow("Estela de la pelota", "Rastro que sigue a la pelota", l.ballTrail, (on) => {
 		updateLinesLive({ ballTrail: on });
 		SAVE("vis_ball_trail", on);
@@ -467,10 +483,153 @@ const buildSettings = async (): Promise<HTMLElement> => {
 	return box;
 };
 
+// ---- Extras: chat, sonidos, plantillas, equipo, salas -------------------------------
+
+const readSoundFile = (file: File): Promise<string> =>
+	new Promise((resolve, reject) => {
+		if (file.size > 600 * 1024) { reject(new Error("El audio pesa mas de 600 KB")); return; }
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result));
+		reader.onerror = () => reject(reader.error);
+		reader.readAsDataURL(file);
+	});
+
+const textArea = (value: string, rows: number, placeholder: string): HTMLTextAreaElement => {
+	const area = document.createElement("textarea");
+	area.value = value;
+	area.rows = rows;
+	area.placeholder = placeholder;
+	area.style.cssText = "width:100%;box-sizing:border-box;padding:8px 10px;font-size:13px;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);resize:vertical;";
+	area.addEventListener("keydown", (e) => e.stopPropagation());
+	return area;
+};
+
+const soundPicker = (label: string, kind: "mention" | "msg", prefKey: string): HTMLElement => {
+	const wrap = el("div");
+	wrap.style.cssText = "display:flex;flex-direction:column;gap:6px;padding:6px 0;";
+	const status = el("div", "hx-hint", getExtras()[kind === "mention" ? "mentionUrl" : "msgUrl"] ? "Sonido propio cargado" : "Sonido generado por la app");
+	wrap.appendChild(labelBlock(label));
+	wrap.appendChild(status);
+	const buttons = el("div", "hx-swatches");
+	const pick = el("button", "hx-btn", "Elegir audio");
+	pick.addEventListener("click", () => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = "audio/*";
+		input.addEventListener("change", async () => {
+			const file = input.files?.[0];
+			if (!file) return;
+			try {
+				const url = await readSoundFile(file);
+				updateExtras(kind === "mention" ? { mentionUrl: url } : { msgUrl: url });
+				SAVE(prefKey, url);
+				status.textContent = "Sonido propio cargado";
+				playSound(kind);
+			} catch (error) {
+				status.textContent = String((error as Error).message || error);
+			}
+		});
+		holdUntilDone();
+		input.click();
+	});
+	const test = el("button", "hx-btn ghost", "Probar");
+	test.addEventListener("click", () => playSound(kind));
+	const reset = el("button", "hx-btn ghost", "Quitar");
+	reset.addEventListener("click", () => {
+		updateExtras(kind === "mention" ? { mentionUrl: "" } : { msgUrl: "" });
+		SAVE(prefKey, "");
+		status.textContent = "Sonido generado por la app";
+	});
+	buttons.append(pick, test, reset);
+	wrap.appendChild(buttons);
+	return wrap;
+};
+
+const buildExtras = async (): Promise<HTMLElement> => {
+	const x = getExtras();
+	const box = el("div");
+	box.appendChild(el("h2", "", "Chat, equipo y salas"));
+	box.appendChild(el("p", "hx-sub", "Comodidades del cliente. No cambian nada del juego en si."));
+
+	box.appendChild(group("Chat"));
+	box.appendChild(switchRow("Resaltar si me mencionan", "Marca el mensaje que incluye tu nombre", x.chatHighlight, (on) => {
+		updateExtras({ chatHighlight: on });
+		SAVE("x_chat_highlight", on);
+	}));
+	box.appendChild(switchRow("Sonido al mencionarme", undefined, x.mentionSound, (on) => {
+		updateExtras({ mentionSound: on });
+		SAVE("x_mention_sound", on);
+	}));
+	box.appendChild(switchRow("Sonido en cada mensaje ajeno", "Un tic suave por mensaje", x.msgSound, (on) => {
+		updateExtras({ msgSound: on });
+		SAVE("x_msg_sound", on);
+	}));
+	box.appendChild(sliderRow("Volumen de avisos", x.volume, 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`,
+		(v) => updateExtras({ volume: v }), (v) => SAVE("x_snd_vol", v)));
+	box.appendChild(soundPicker("Sonido de mencion", "mention", "x_snd_mention"));
+	box.appendChild(soundPicker("Sonido de mensaje", "msg", "x_snd_msg"));
+	box.appendChild(el("p", "hx-sub", "Los sonidos del gol y de la patada vienen dentro del juego y todavia no los puedo reemplazar."));
+
+	box.appendChild(group("Plantillas de mensajes (Alt + 1 a 9)"));
+	box.appendChild(el("p", "hx-sub", "Un mensaje por linea. Alt+1 manda la primera, Alt+2 la segunda, etc. (hasta 9)."));
+	const tpl = textArea(x.templates.join("\n"), 6, "gg\npasala\ndefensa!");
+	tpl.addEventListener("change", () => {
+		const list = tpl.value.split("\n").map((t) => t.trim()).filter(Boolean).slice(0, 9);
+		updateExtras({ templates: list });
+		SAVE("x_templates", list);
+		showToast(`${list.length} plantillas guardadas`);
+	});
+	box.appendChild(tpl);
+	const sendRow = el("div", "hx-swatches");
+	x.templates.slice(0, 9).forEach((t, i) => {
+		const b = el("button", "hx-btn ghost", `${i + 1}`);
+		b.title = t;
+		b.addEventListener("click", () => { if (!sendChat(getExtras().templates[i] || t)) showToast("Entra a una sala para usar el chat"); });
+		sendRow.appendChild(b);
+	});
+	box.appendChild(sendRow);
+
+	box.appendChild(group("Mi equipo"));
+	box.appendChild(el("p", "hx-sub", "Nombres de tus companeros, uno por linea. Se marcan con una barrita amarilla en la lista de jugadores de la sala."));
+	const team = textArea(x.team.join("\n"), 4, "Nombre1\nNombre2");
+	const present = el("p", "hx-sub", "");
+	const refreshPresent = () => {
+		const list = getTeamPresent();
+		present.textContent = list.length ? `En tu sala ahora: ${list.join(", ")}` : "Ninguno en tu sala ahora";
+	};
+	refreshPresent();
+	team.addEventListener("change", () => {
+		const list = team.value.split("\n").map((t) => t.trim()).filter(Boolean);
+		updateExtras({ team: list });
+		SAVE("x_team", list);
+		setTimeout(refreshPresent, 1200);
+	});
+	box.appendChild(team);
+	box.appendChild(present);
+
+	box.appendChild(group("Salas"));
+	box.appendChild(switchRow("Avisar si aparece una sala favorita", "Notificacion al verla en la lista (hay que tener la lista de salas abierta)", x.favAlerts, (on) => {
+		updateExtras({ favAlerts: on });
+		SAVE("x_fav_alerts", on);
+	}));
+	const last = el("p", "hx-sub", x.lastRoom ? `Ultima sala: ${x.lastRoom}` : "Todavia no hay una ultima sala guardada.");
+	const rejoin = el("button", "hx-btn", "Volver a la ultima sala");
+	rejoin.style.width = "100%";
+	rejoin.addEventListener("click", () => {
+		const msg = rejoinLastRoom();
+		showToast(msg);
+		last.textContent = msg;
+	});
+	box.appendChild(rejoin);
+	box.appendChild(last);
+	return box;
+};
+
 const BUILDERS: Record<SectionId, () => Promise<HTMLElement>> = {
 	look: buildLook,
 	perf: buildPerf,
 	pitch: buildPitch,
+	extras: buildExtras,
 	settings: buildSettings,
 };
 

@@ -3,6 +3,7 @@ import { Profile, profileManage } from "../profiles";
 import { openSettingsAlert } from "../settings";
 import { waitForElement } from "../waitForElement";
 import { URL } from "../constants";
+import { BRAND_LOGO } from "../brand";
 
 const aboutAlert = (): void => {
     customAlert(
@@ -214,6 +215,11 @@ export const setupCustomHeader = async (): Promise<void> => {
     const titleLink = document.createElement("a");
     // titleLink.href = "https://www.haxball.com/play";
     titleLink.textContent = "TL App";
+    const crest = document.createElement("img");
+    crest.src = BRAND_LOGO;
+    crest.alt = "";
+    crest.style.cssText = "height:22px;width:22px;object-fit:contain;vertical-align:middle;margin-right:8px;";
+    titleSpan.appendChild(crest);
     titleSpan.appendChild(titleLink);
 
     const about = document.createElement("a");

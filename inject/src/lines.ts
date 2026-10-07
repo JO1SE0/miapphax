@@ -30,6 +30,7 @@ export type LinesConfig = CosConfig & {
 	bgEnabled: boolean; // degradé en vez del pasto verde de afuera
 	bgFrom: string;
 	bgTo: string;
+	bgAnim: boolean; // degradé que se mueve despacio
 };
 
 // Valores originales del juego (tambien son los que se usan al apagar el modo).
@@ -54,6 +55,7 @@ export const DEFAULT_CONFIG: LinesConfig = {
 	bgEnabled: true,
 	bgFrom: "#203860",
 	bgTo: "#08101f",
+	bgAnim: false,
 	...COS_DEFAULTS,
 };
 
@@ -289,6 +291,11 @@ const readConfigFromPrefs = (prefs: any): LinesConfig => ({
 	bgEnabled: prefs?.bg_enabled ?? DEFAULT_CONFIG.bgEnabled,
 	bgFrom: /^#[0-9a-f]{6}$/i.test(prefs?.bg_from) ? prefs.bg_from : DEFAULT_CONFIG.bgFrom,
 	bgTo: /^#[0-9a-f]{6}$/i.test(prefs?.bg_to) ? prefs.bg_to : DEFAULT_CONFIG.bgTo,
+	bgAnim: prefs?.bg_anim === true,
+	wmEnabled: prefs?.wm_enabled === true,
+	wmOpacity: Math.min(0.5, Math.max(0.02, Number(prefs?.wm_opacity) || COS_DEFAULTS.wmOpacity)),
+	wmSize: Math.min(400, Math.max(60, Number(prefs?.wm_size) || COS_DEFAULTS.wmSize)),
+	wmLogo: typeof prefs?.club_logo === "string" ? prefs.club_logo : "",
 	cosEnabled: prefs?.vis_enabled ?? COS_DEFAULTS.cosEnabled,
 	myScale: clampScale(prefs?.vis_my_scale),
 	ballScale: clampScale(prefs?.vis_ball_scale),

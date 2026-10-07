@@ -9,12 +9,18 @@
 //     misma posicion; el disco de jugador relleno con patron que cae en ese punto es el tuyo.
 //   * Pelota: primer disco con relleno de color (no patron) y lineWidth 2 de cada cuadro.
 
+import { BRAND_LOGO } from "./brand";
+
 export type CosConfig = {
 	cosEnabled: boolean;
 	myScale: number;
 	ballScale: number;
 	ballColor: string; // "" = el original
 	ballTrail: boolean;
+	wmEnabled: boolean; // marca de agua en el centro de la cancha
+	wmOpacity: number;
+	wmSize: number; // en unidades del mapa
+	wmLogo: string; // data URL ("" = escudo por defecto)
 };
 
 export const COS_DEFAULTS: CosConfig = {
@@ -23,6 +29,10 @@ export const COS_DEFAULTS: CosConfig = {
 	ballScale: 1,
 	ballColor: "",
 	ballTrail: false,
+	wmEnabled: false,
+	wmOpacity: 0.12,
+	wmSize: 160,
+	wmLogo: "",
 };
 
 const FULL = Math.PI * 2 - 0.01;
@@ -42,13 +52,16 @@ export const installCosmetics = (win: any, getCfg: () => CosConfig | undefined):
 	let ballDone = false;
 	let pendingK = 0; // escala extra para el relleno (patron) de mi ficha
 	let trail: [number, number][] = [];
+	let wmDone = false;
+	let wmImg: any = null;
+	let wmSrc = "";
 
 	proto.stroke = function (this: any, ...args: any[]) {
 		const cfg = getCfg();
 		if (cfg?.cosEnabled && this.lineWidth === 3) {
 			// el trazo del aro no reinicia el cuadro; los de la cancha si
 			if (haloFresh) haloFresh = false;
-			else { halo = null; ballDone = false; }
+			else { halo = null; ballDone = false; wmDone = false; }
 		}
 		return baseStroke.apply(this, args);
 	};
@@ -65,6 +78,25 @@ export const installCosmetics = (win: any, getCfg: () => CosConfig | undefined):
 			return baseArc.call(this, x, y, r, s, e, ccw);
 		}
 		if (lw !== 2) return baseArc.call(this, x, y, r, s, e, ccw);
+
+		// marca de agua: una vez por cuadro, antes de los discos, en el centro del mapa (0,0)
+		if (!wmDone) {
+			wmDone = true;
+			if (cfg.wmEnabled) {
+				const src = cfg.wmLogo || BRAND_LOGO;
+				if (!wmImg || wmSrc !== src) {
+					wmSrc = src;
+					wmImg = new win.Image();
+					wmImg.src = src;
+				}
+				if (wmImg.complete && wmImg.naturalWidth) {
+					this.save();
+					this.globalAlpha = cfg.wmOpacity;
+					this.drawImage(wmImg, -cfg.wmSize / 2, -cfg.wmSize / 2, cfg.wmSize, cfg.wmSize);
+					this.restore();
+				}
+			}
+		}
 
 		const fill = this.fillStyle;
 		if (typeof fill === "object") {
