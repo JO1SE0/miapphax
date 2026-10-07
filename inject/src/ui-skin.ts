@@ -43,6 +43,7 @@ export const buildSkinCss = (o: SkinOptions): string => {
 	--hx-font: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, -apple-system, Roboto, sans-serif;
 }
 body { font-family: var(--hx-font) !important; }
+${o.lowGpu ? "* { transition: none !important; animation: none !important; }" : ""}
 button, input, select, textarea { font-family: inherit; }
 
 /* ---------- Tarjetas generales (dialogos, menus) ---------- */

@@ -142,9 +142,16 @@ if (preferences.low_latency) {
   // Chromium en Windows calcula si la ventana esta tapada (cuesta CPU y puede
   // frenar el render); lo apagamos. 'disable-features' se pasa en UNA sola
   // llamada porque una segunda pisaria a la primera.
-  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,IntensiveWakeUpThrottling');
   // Sin limite de eventos de teclado/mouse por segundo hacia la pagina.
   app.commandLine.appendSwitch('disable-ipc-flooding-protection');
+  // Menos trabajo en segundo plano: sin monitor de cuelgues, reportes de fallas,
+  // actualizaciones de componentes, red de fondo, accesibilidad ni scroll suave.
+  for (const flag of [
+    'disable-hang-monitor', 'disable-breakpad', 'disable-component-update',
+    'disable-background-networking', 'disable-sync', 'disable-default-apps',
+    'no-pings', 'disable-renderer-accessibility', 'disable-smooth-scrolling'
+  ]) app.commandLine.appendSwitch(flag);
   console.log("Low latency flags enabled")
 }
 
@@ -199,7 +206,8 @@ const createWindow = () => {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      backgroundThrottling: !preferences.low_latency
+      backgroundThrottling: !preferences.low_latency,
+      spellcheck: false
     },
     title: "TL App",
     icon: path.join(__dirname, 'assets', 'icon.png')
@@ -217,6 +225,14 @@ const createWindow = () => {
     e.preventDefault();
     win.setTitle('TL App');
   });
+
+  // Baja latencia: que Windows no apague la pantalla ni suspenda la app en plena partida.
+  if (preferences.low_latency) {
+    try {
+      const { powerSaveBlocker } = require('electron');
+      powerSaveBlocker.start('prevent-display-sleep');
+    } catch (e) { /* no critico */ }
+  }
 
   win.loadURL('https://www.haxball.com/play');
 
