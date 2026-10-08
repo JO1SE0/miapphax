@@ -1,10 +1,7 @@
 import { removeAds } from "./removeAds";
-import { addAddressBarToHeader, setupCustomHeader } from "./setupCustomHeader";
-import { setupRoomDropdown } from "./roomDropdown";
+import { setupCustomHeader } from "./setupCustomHeader";
 
 export const setupUIElements = async (): Promise<void> => {
 	await removeAds();
 	await setupCustomHeader();
-	addAddressBarToHeader();
-	setupRoomDropdown();
 }
