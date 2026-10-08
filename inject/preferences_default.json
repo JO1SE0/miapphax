@@ -1,6 +1,6 @@
 {
-	"fps_unlock": false,
-	"low_latency": false,
+	"fps_unlock": true,
+	"low_latency": true,
 	"reduce_effects": false,
 	"lines_enabled": true,
 	"line_width_field": 1.5,
@@ -53,7 +53,7 @@
 	"pitch_flat_color": "",
 	"canvas_desync": false,
 	"force_gpu": false,
-	"high_priority": false,
+	"high_priority": true,
 	"in_process_gpu": false,
 	"disable_extension": false,
 	"chat_opacity": 0.8,

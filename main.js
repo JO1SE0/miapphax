@@ -1,6 +1,7 @@
-﻿const { app, shell, BrowserWindow, ipcMain, dialog, screen } = require('electron');
+const { app, shell, BrowserWindow, ipcMain, dialog, screen, powerSaveBlocker } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { URL } = require('url');
 const { z } = require('zod');
 const { version } = require('./package.json');
@@ -57,17 +58,21 @@ const validatePreferences = (prefs) => {
   });
 
   const PreferencesSchema = z.object({
-      fps_unlock: z.boolean(),
+      fps_unlock: z.boolean().optional(),
+      low_latency: z.boolean().optional(),
+      reduce_effects: z.boolean().optional(),
+      graphics_line_width: z.number().optional(),
+      chat_opacity: z.number().optional(),
       notes: z.array(z.object({
         title: z.string(),
         body: z.string(),
         time: z.string()
-      })), 
-      transp_ui: z.boolean(),
-      shortcuts: z.array(z.tuple([z.string(), z.string()])),
-      profiles: z.array(ProfileSchema),
+      })).optional(), 
+      transp_ui: z.boolean().optional(),
+      shortcuts: z.array(z.tuple([z.string(), z.string()])).optional(),
+      profiles: z.array(ProfileSchema).optional(),
       discord_rpc: z.boolean().optional()
-  });
+  }).passthrough();
 
   try {
     PreferencesSchema.parse(prefs);
@@ -112,47 +117,81 @@ const loadAppPreferences = () => {
   }
 }
 
+// Prioridad alta en Windows para reducir latencia de planificación de hilos
+try {
+  if (os.constants && os.constants.priority && os.constants.priority.PRIORITY_HIGH) {
+    os.setPriority(os.constants.priority.PRIORITY_HIGH);
+  }
+} catch (e) {
+  // Ignorar si el SO no da permisos
+}
+
+// Prevenir modo de suspensión / EcoQoS de Windows
+try {
+  powerSaveBlocker.start('prevent-app-suspension');
+} catch (e) {
+  // Ignorar
+}
+
 const preferences = loadAppPreferences();
+
 // --- Rendimiento / latencia -------------------------------------------------
 // Todas son flags estandar de Chromium. Se leen una sola vez al arrancar, por
 // eso hay que reiniciar la app despues de cambiar estas opciones en Settings.
-//
-// FPS ilimitado: sin vsync ni limite de cuadros (puede verse algo de tearing).
-if (preferences.fps_unlock) {
-  app.commandLine.appendSwitch('disable-gpu-vsync');
-  app.commandLine.appendSwitch('disable-frame-rate-limit');
-  // (estas tres ya estaban aca antes; se repiten en low_latency y no molesta)
-  app.commandLine.appendSwitch('ignore-gpu-blocklist');
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-zero-copy');
-  console.log("FPS unlocked")
+
+// --- Flags de GPU y aceleración por hardware (FPS al máximo) ---
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('force-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
+app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('disable-gpu-watchdog');
+
+// Backend Direct3D 11 nativo de Windows (menor latencia de render e input)
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('use-angle', 'd3d11');
 }
 
-// Modo baja latencia (Settings > Low Latency): evita que Chromium baje la
-// prioridad del juego y usa mejor la GPU.
-if (preferences.low_latency) {
-  // GPU: dibujar el canvas con la GPU y evitar copias de memoria.
-  app.commandLine.appendSwitch('ignore-gpu-blocklist');
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-zero-copy');
-  // Nada de throttling cuando la ventana no esta en primer plano / tapada.
-  app.commandLine.appendSwitch('disable-renderer-backgrounding');
-  app.commandLine.appendSwitch('disable-background-timer-throttling');
-  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
-  // Chromium en Windows calcula si la ventana esta tapada (cuesta CPU y puede
-  // frenar el render); lo apagamos. 'disable-features' se pasa en UNA sola
-  // llamada porque una segunda pisaria a la primera.
-  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,IntensiveWakeUpThrottling');
-  // Sin limite de eventos de teclado/mouse por segundo hacia la pagina.
-  app.commandLine.appendSwitch('disable-ipc-flooding-protection');
-  // Menos trabajo en segundo plano: sin monitor de cuelgues, reportes de fallas,
-  // actualizaciones de componentes, red de fondo, accesibilidad ni scroll suave.
-  for (const flag of [
-    'disable-hang-monitor', 'disable-breakpad', 'disable-component-update',
-    'disable-background-networking', 'disable-sync', 'disable-default-apps',
-    'no-pings', 'disable-renderer-accessibility', 'disable-smooth-scrolling'
-  ]) app.commandLine.appendSwitch(flag);
-  console.log("Low latency flags enabled")
+// Rasterizado de Canvas fuera de proceso (Out-of-Process) y Skia Renderer
+app.commandLine.appendSwitch(
+  'enable-features',
+  'CanvasOopRasterization,UseSkiaRenderer,RawDraw'
+);
+
+// --- Anti-Throttling e Input Latency ---
+// Desactivar oclusión nativa de Windows (evita tirones y lag spikes en Win 10/11)
+// y desactivar mDNS en WebRTC (acelera la conexión directa P2P a las salas)
+app.commandLine.appendSwitch(
+  'disable-features',
+  'CalculateNativeWinOcclusion,IntensiveWakeUpThrottling,WebRtcHideLocalIpsWithMdns'
+);
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+
+// Reducir tareas de fondo de Chromium para evitar micro-stutters
+for (const flag of [
+  'disable-hang-monitor', 'disable-breakpad', 'disable-component-update',
+  'disable-background-networking', 'disable-sync', 'disable-default-apps',
+  'no-pings', 'disable-renderer-accessibility', 'disable-smooth-scrolling'
+]) {
+  app.commandLine.appendSwitch(flag);
+}
+
+// Timers de alta resolución y respuesta de eventos
+app.commandLine.appendSwitch('enable-high-resolution-time');
+app.commandLine.appendSwitch('disable-ipc-flooding-protection');
+
+// Rendimiento en tiempo real de WebRTC (motor multijugador de HaxBall)
+app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '100');
+
+// Desbloqueo de FPS y eliminación de V-Sync
+if (preferences.fps_unlock !== false) {
+  app.commandLine.appendSwitch('disable-gpu-vsync');
+  app.commandLine.appendSwitch('disable-frame-rate-limit');
+  console.log("FPS unlocked & V-Sync disabled");
 }
 
 // Laptops con dos placas de video: fuerza la GPU dedicada en vez de la integrada.
@@ -160,18 +199,13 @@ if (preferences.force_gpu) {
   app.commandLine.appendSwitch('force_high_performance_gpu');
 }
 
-// EXPERIMENTAL: el proceso de GPU corre dentro del proceso principal. Ahorra
-// comunicacion entre procesos (puede bajar algo la latencia) pero si la GPU
-// se cuelga se cae toda la app. Apagado por defecto.
+// EXPERIMENTAL: el proceso de GPU corre dentro del proceso principal.
 if (preferences.in_process_gpu) {
   app.commandLine.appendSwitch('in-process-gpu');
 }
 
-// Prioridad alta de CPU para la app y sus procesos (ayuda cuando la PC esta
-// cargada). No necesita permisos de administrador; si el sistema no lo permite
-// simplemente se ignora.
+// Prioridad alta de CPU para la app y sus procesos (ayuda cuando la PC esta cargada)
 const boostPriority = () => {
-  if (!preferences.high_priority) return;
   const os = require('os');
   const high = os.constants.priority.PRIORITY_HIGH;
   const pids = new Set([process.pid]);
@@ -206,8 +240,9 @@ const createWindow = () => {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      backgroundThrottling: !preferences.low_latency,
-      spellcheck: false
+      backgroundThrottling: false,
+      spellcheck: false,
+      enableWebSQL: false
     },
     title: "TL App",
     icon: path.join(__dirname, 'assets', 'icon.png')
