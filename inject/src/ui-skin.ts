@@ -52,6 +52,17 @@ html, body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
+/* Fondo del escudo: azul oscuro, siempre. html lleva el color base y body::before el degradé. */
+html { background: #08101f !important; min-height: 100%; }
+body { background-color: transparent !important; }
+body::before {
+	content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+	background:
+		radial-gradient(ellipse 70% 55% at 18% 0%, rgba(45, 79, 138, 0.55) 0%, transparent 70%),
+		radial-gradient(ellipse 60% 50% at 100% 100%, rgba(208, 184, 120, 0.14) 0%, transparent 65%),
+		linear-gradient(165deg, #172c52 0%, #0b172c 55%, #060c19 100%);
+}
+
 ${o.lowGpu ? "* { transition: none !important; animation: none !important; }" : ""}
 button, input, select, textarea {
 	font-family: var(--hx-font) !important;
@@ -63,15 +74,7 @@ button, input, select, textarea {
 	border: 1px solid var(--hx-card-border) !important;
 	border-radius: calc(var(--hx-radius) + 8px) !important;
 	box-shadow: var(--hx-card-shadow) !important;
-	-webkit-backdrop-filter: blur(var(--hx-blur)) !important;
-	backdrop-filter: blur(var(--hx-blur)) !important;
 	padding: calc(20px * var(--hx-d)) calc(24px * var(--hx-d)) !important;
-	animation: haxModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-@keyframes haxModalPop {
-	from { opacity: 0; transform: scale(0.95) translateY(-8px); }
-	to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .dialog h1, h1, h2 {
@@ -226,8 +229,6 @@ select {
 	border: 1px solid var(--hx-card-border) !important;
 	border-radius: 20px !important;
 	box-shadow: var(--hx-card-shadow) !important;
-	-webkit-backdrop-filter: blur(var(--hx-blur)) !important;
-	backdrop-filter: blur(var(--hx-blur)) !important;
 	padding: calc(18px * var(--hx-d)) calc(22px * var(--hx-d)) 30px !important;
 	max-width: 980px !important;
 }
