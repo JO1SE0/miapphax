@@ -1,7 +1,7 @@
 {
 
-"fps_unlock": false,
-"low_latency": false,
+  "fps_unlock": true,
+  "low_latency": true,
 "reduce_effects": false,
 "graphics_line_width": 1,
 "chat_opacity": 0.8,

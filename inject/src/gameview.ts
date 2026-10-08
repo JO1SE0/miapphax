@@ -12,7 +12,7 @@ const applyLowLatencyVisuals = async (
 	}
 
 	const prefs = await window.electronAPI.getAppPreferences();
-	const enabled = prefs["low_latency"] === true;
+	const enabled = prefs["low_latency"] !== false;
 
 	const existingStyle = doc.getElementById(LOW_LATENCY_STYLE_ID);
 
@@ -39,6 +39,19 @@ const applyLowLatencyVisuals = async (
 		.container {
 			box-shadow: none !important;
 			filter: none !important;
+		}
+
+		/* Capa GPU dedicada y optimización de renderizado para el canvas del juego */
+		canvas {
+			image-rendering: -webkit-optimize-contrast !important;
+			transform: translateZ(0) !important;
+			will-change: transform !important;
+			backface-visibility: hidden !important;
+		}
+
+		/* Contención de layout y repintado para evitar relayout global en cada frame */
+		.game-view {
+			contain: layout paint !important;
 		}
 	`;
 
