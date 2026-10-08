@@ -184,6 +184,7 @@ export const setupCustomHeader = async (): Promise<void> => {
     header.innerHTML = ""; // clear old header
 
     // 🆕 Use CSS Grid to split into 3 equal sections
+    header.style.height = "52px";
     header.style.display = "grid";
     header.style.gridTemplateColumns = "1fr 1fr 1fr"; // 3 equal parts
     header.style.alignItems = "center";
@@ -221,8 +222,14 @@ export const setupCustomHeader = async (): Promise<void> => {
     crest.src = BRAND_LOGO;
     crest.alt = "";
     crest.classList.add("tl-crest");
-    titleSpan.appendChild(crest);
-    titleSpan.appendChild(titleLink);
+    const brandText = document.createElement("span");
+    brandText.classList.add("tl-brand-text");
+    const sub = document.createElement("span");
+    sub.classList.add("tl-sub");
+    sub.textContent = "Toda la Lecce";
+    brandText.append(titleLink, sub);
+    titleSpan.classList.add("tl-brand");
+    titleSpan.append(crest, brandText);
 
     leftContainer.appendChild(titleSpan);
 
@@ -276,7 +283,7 @@ export const toggleHeaderVisibility = (): void => {
     if (!isVisible) {
         // Show header
         localStorage.setItem("header_visible", "true")
-        header.style.height = "44px";
+        header.style.height = "52px";
 
         // Remove arrow if it exists
         if (existingArrow) {

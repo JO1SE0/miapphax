@@ -154,12 +154,11 @@ select {
 	cursor: pointer !important;
 }
 
-/* ---------- Lista de Salas: tarjetas en cuadricula (estructura real del juego) ----------
+/* ---------- Lista de Salas: filas una debajo de otra, cada sala como tarjeta ----------
    .roomlist-view > .dialog > [h1, p, p, buscador, .splitter > (.list + .buttons)]
-   .list > table.header + .separator + .content > table > tbody[data-hook=list] > tr (4 celdas:
-   nombre, jugadores, clave, distancia). .roomlist-view es la vista de pantalla completa: no se achica. */
+   .list > table.header + .separator + .content > table > tbody[data-hook=list] > tr (nombre, jugadores, clave, distancia). */
 .roomlist-view .dialog {
-	width: min(1200px, 95vw) !important;
+	width: min(1180px, 95vw) !important;
 	max-width: none !important;
 	box-sizing: border-box !important;
 }
@@ -186,59 +185,69 @@ select {
 
 .roomlist-view .splitter { gap: 16px; }
 
-/* la cabecera de columnas sobra: cada tarjeta se explica sola */
-.roomlist-view .list table.header, .roomlist-view .list .separator { display: none !important; }
+/* tablas: filas separadas (cada una es una tarjeta) */
+.roomlist-view .list table {
+	border-collapse: separate !important;
+	border-spacing: 0 calc(8px * var(--hx-d)) !important;
+	width: 100% !important;
+}
+.roomlist-view .list table.header thead td {
+	font-family: var(--hx-font-display) !important;
+	font-size: 11px !important;
+	font-weight: 800 !important;
+	letter-spacing: 0.12em !important;
+	text-transform: uppercase !important;
+	color: rgba(208, 184, 120, 0.85) !important;
+	padding: 6px 16px !important;
+	border: none !important;
+	background: none !important;
+}
+.roomlist-view .list .separator { display: none !important; }
 
-.roomlist-view .list .content table,
-.roomlist-view .list .content tbody { display: block !important; width: 100% !important; }
-.roomlist-view .list .content colgroup { display: none !important; }
-.roomlist-view .list .content tbody[data-hook=list] {
-	display: grid !important;
-	grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-	gap: calc(10px * var(--hx-d));
-	padding: 4px 8px 14px 2px !important;
+.roomlist-view .list .content tbody tr { cursor: pointer !important; background: none !important; border: none !important; }
+.roomlist-view .list .content tbody tr td {
+	padding: calc(13px * var(--hx-d)) 16px !important;
+	border: none !important;
+	border-top: 1px solid rgba(208, 184, 120, 0.14) !important;
+	border-bottom: 1px solid rgba(208, 184, 120, 0.14) !important;
+	background: linear-gradient(180deg, rgba(30, 55, 96, 0.55) 0%, rgba(13, 24, 44, 0.8) 100%) !important;
+	font-size: 14px !important;
+	color: #dbe5f5 !important;
+	transition: background 0.15s ease, border-color 0.15s ease !important;
 }
+.roomlist-view .list .content tbody tr td:first-child {
+	border-left: 1px solid rgba(208, 184, 120, 0.14) !important;
+	border-radius: 16px 0 0 16px !important;
+	box-shadow: inset 4px 0 0 rgba(208, 184, 120, 0.35);
+	padding-left: 18px !important;
+	font-weight: 700 !important;
+	font-size: 15px !important;
+	color: #ffffff !important;
+}
+.roomlist-view .list .content tbody tr td:last-child {
+	border-right: 1px solid rgba(208, 184, 120, 0.14) !important;
+	border-radius: 0 16px 16px 0 !important;
+}
+/* jugadores y clave: centrados, jugadores en dorado */
+.roomlist-view .list .content tbody tr td:nth-child(2) { color: var(--hx-gold) !important; font-weight: 800 !important; font-variant-numeric: tabular-nums; }
+.roomlist-view .list .content tbody tr td:nth-child(3) { color: #8fa2bf !important; font-size: 12px !important; text-transform: uppercase; letter-spacing: 0.05em; }
+.roomlist-view .list .content tbody tr td:nth-child(4) { color: #a9bcd8 !important; font-size: 13px !important; }
 
-.roomlist-view .list .content tbody tr {
-	display: grid !important;
-	grid-template-columns: minmax(0, 1fr) auto;
-	grid-template-areas: "n p" "d k";
-	align-items: center;
-	gap: 6px 10px;
-	padding: calc(12px * var(--hx-d)) 14px !important;
-	background: linear-gradient(160deg, rgba(27, 50, 88, 0.55) 0%, rgba(10, 19, 36, 0.78) 100%) !important;
-	border: 1px solid rgba(208, 184, 120, 0.14) !important;
-	border-left: 3px solid transparent !important;
-	border-radius: 14px !important;
-	cursor: pointer !important;
-	transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
+.roomlist-view .list .content tbody tr:hover td {
+	background: linear-gradient(180deg, rgba(44, 76, 128, 0.75) 0%, rgba(18, 32, 58, 0.9) 100%) !important;
+	border-top-color: rgba(208, 184, 120, 0.5) !important;
+	border-bottom-color: rgba(208, 184, 120, 0.5) !important;
 }
-.roomlist-view .list .content tbody tr[style*="display: none"] { display: none !important; }
-.roomlist-view .list .content tbody tr:hover {
-	border-color: rgba(208, 184, 120, 0.55) !important;
-	box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4), 0 0 14px rgba(208, 184, 120, 0.16) !important;
+.roomlist-view .list .content tbody tr:hover td:first-child { border-left-color: rgba(208, 184, 120, 0.5) !important; box-shadow: inset 4px 0 0 var(--hx-gold); }
+.roomlist-view .list .content tbody tr:hover td:last-child { border-right-color: rgba(208, 184, 120, 0.5) !important; }
+
+.roomlist-view .list .content tbody tr.selected td {
+	background: linear-gradient(180deg, rgba(58, 98, 164, 0.85) 0%, rgba(22, 40, 72, 0.95) 100%) !important;
+	border-top-color: var(--hx-gold) !important;
+	border-bottom-color: var(--hx-gold) !important;
 }
-.roomlist-view .list .content tbody tr.selected {
-	border-color: var(--hx-gold) !important;
-	border-left-color: var(--hx-gold) !important;
-	background: linear-gradient(160deg, rgba(45, 79, 138, 0.7) 0%, rgba(14, 26, 49, 0.88) 100%) !important;
-	box-shadow: 0 0 0 1px rgba(208, 184, 120, 0.45), 0 10px 26px rgba(0, 0, 0, 0.45) !important;
-}
-.roomlist-view .list .content tbody tr td { padding: 0 !important; border: none !important; background: none !important; min-width: 0; }
-.roomlist-view .list .content tbody tr td:nth-child(1) {
-	grid-area: n; font-size: 15px !important; font-weight: 700 !important; color: #ffffff !important;
-	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.roomlist-view .list .content tbody tr td:nth-child(2) {
-	grid-area: p; justify-self: end; padding: 2px 10px !important; border-radius: 999px;
-	background: rgba(208, 184, 120, 0.14) !important; color: #f3e7c4 !important; font-weight: 800 !important; font-size: 13px !important;
-	font-variant-numeric: tabular-nums;
-}
-.roomlist-view .list .content tbody tr td:nth-child(3) {
-	grid-area: k; justify-self: end; font-size: 11px !important; letter-spacing: 0.06em; text-transform: uppercase; color: #8fa2bf !important;
-}
-.roomlist-view .list .content tbody tr td:nth-child(3)::before { content: "Clave: "; opacity: 0.7; }
-.roomlist-view .list .content tbody tr td:nth-child(4) { grid-area: d; font-size: 12px !important; color: #a9bcd8 !important; }
+.roomlist-view .list .content tbody tr.selected td:first-child { border-left-color: var(--hx-gold) !important; box-shadow: inset 5px 0 0 var(--hx-gold), -4px 0 18px rgba(208, 184, 120, 0.18); }
+.roomlist-view .list .content tbody tr.selected td:last-child { border-right-color: var(--hx-gold) !important; }
 
 .roomlist-view input[type=checkbox] {
 	accent-color: var(--hx-gold) !important;
@@ -482,13 +491,20 @@ select {
 }
 
 /* crest y bloques azules heredados del header original */
-.tl-crest { height: 28px !important; width: 28px !important; max-width: 28px !important; object-fit: contain; vertical-align: middle; margin-right: 10px; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); }
-.header.tl-header .left-container .title, .header.tl-header .left-container .title a { background: none !important; box-shadow: none !important; border: none !important; padding-left: 0 !important; }
+.header.tl-header .tl-brand { display: inline-flex !important; align-items: center; gap: 12px; background: none !important; box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+.tl-crest { height: 38px !important; width: 38px !important; max-width: 38px !important; object-fit: contain; margin: 0 !important; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.55)); }
+.tl-brand-text { display: inline-flex; flex-direction: column; justify-content: center; line-height: 1; gap: 4px; }
+.header.tl-header a.tl-wordmark {
+	font-family: var(--hx-font-display) !important; font-weight: 800 !important; font-size: 21px !important; letter-spacing: 0.18em !important; text-transform: uppercase !important;
+	line-height: 1 !important; padding: 0 !important; margin: 0 !important; border: none !important; text-decoration: none !important; display: block !important;
+	background: linear-gradient(180deg, #ffffff 15%, var(--hx-gold) 100%) !important; -webkit-background-clip: text !important; background-clip: text !important; -webkit-text-fill-color: transparent !important;
+}
+.tl-sub { font: 600 10px var(--hx-font) !important; letter-spacing: 0.34em; text-transform: uppercase; color: rgba(208, 184, 120, 0.85); }
 .header.tl-header .right-container .title {
 	background: rgba(208, 184, 120, 0.1) !important; border: 1px solid rgba(208, 184, 120, 0.4) !important; border-radius: 999px !important;
-	padding: 0 14px !important; box-shadow: none !important; margin-left: 0 !important;
+	padding: 0 16px !important; box-shadow: none !important; margin-left: 0 !important; height: 32px; display: inline-flex; align-items: center;
 }
-.header.tl-header .right-container .title a { background: none !important; color: #f3ead2 !important; font-weight: 700; }
+.header.tl-header .right-container .title a { background: none !important; color: #f3ead2 !important; font-weight: 700; padding: 0 !important; }
 
 /* ---------- Scrollbars y Detalles ---------- */
 ::-webkit-scrollbar {
