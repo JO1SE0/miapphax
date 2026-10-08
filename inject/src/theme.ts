@@ -321,7 +321,7 @@ export const applyThemeToDocument = (doc: Document | null | undefined): void => 
 			const link = doc.createElement("link");
 			link.id = "hax-font";
 			link.rel = "stylesheet";
-			link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap";
+			link.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap";
 			doc.head.appendChild(link);
 		}
 		if (!modern) {
