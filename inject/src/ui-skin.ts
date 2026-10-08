@@ -154,67 +154,91 @@ select {
 	cursor: pointer !important;
 }
 
-/* ---------- Lista de Salas (Roomlist View) ---------- */
-/* .roomlist-view es la vista de pantalla completa del juego: NO se le pone ancho maximo ni margen
-   (si no, se achica y deja ver lo que hay detras). La tarjeta es el .dialog que tiene adentro. */
-.roomlist-view .dialog { max-width: 1060px !important; }
+/* ---------- Lista de Salas: tarjetas en cuadricula (estructura real del juego) ----------
+   .roomlist-view > .dialog > [h1, p, p, buscador, .splitter > (.list + .buttons)]
+   .list > table.header + .separator + .content > table > tbody[data-hook=list] > tr (4 celdas:
+   nombre, jugadores, clave, distancia). .roomlist-view es la vista de pantalla completa: no se achica. */
+.roomlist-view .dialog {
+	width: min(1200px, 95vw) !important;
+	max-width: none !important;
+	box-sizing: border-box !important;
+}
+.roomlist-view .dialog > h1 { position: relative; padding-bottom: 12px !important; margin-bottom: 10px !important; }
+.roomlist-view .dialog > h1::after {
+	content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; border-radius: 3px;
+	background: linear-gradient(90deg, var(--hx-gold) 0%, rgba(208, 184, 120, 0.15) 60%, transparent 100%);
+}
+.roomlist-view .dialog > p { margin: 0 0 4px !important; font-size: 12px !important; line-height: 1.45 !important; color: #8fa2bf !important; }
 
-.roomlist-view table {
-	border-collapse: separate !important;
-	border-spacing: 0 calc(6px * var(--hx-d)) !important;
-	width: 100% !important;
+/* buscador + selector de pais */
+#searchRoom { height: 42px !important; border-radius: 999px !important; padding: 0 18px !important; box-sizing: border-box !important; }
+#searchRoomByCountry { position: relative !important; border-radius: 999px !important; }
+#searchRoomByCountry #dropdown-content {
+	position: absolute !important; top: calc(100% + 6px) !important; right: 0 !important; left: auto !important; z-index: 80 !important;
+	min-width: 170px; max-height: 320px; overflow-y: auto; padding: 6px !important; box-sizing: border-box;
+	background: #0d1a31 !important; border: 1px solid rgba(208, 184, 120, 0.4) !important; border-radius: 14px !important;
+	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6) !important; text-align: left;
+}
+#searchRoomByCountry #dropdown-content ul { list-style: none !important; margin: 0 !important; padding: 0 !important; }
+#searchRoomByCountry #dropdown-content li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+#searchRoomByCountry #dropdown-content li:hover { background: var(--hx-accent-soft, rgba(45, 79, 138, 0.5)); }
+#searchRoomByCountry #dropdown-content a { color: #eef2fa !important; text-transform: uppercase; font-size: 12px; font-weight: 700; }
+
+.roomlist-view .splitter { gap: 16px; }
+
+/* la cabecera de columnas sobra: cada tarjeta se explica sola */
+.roomlist-view .list table.header, .roomlist-view .list .separator { display: none !important; }
+
+.roomlist-view .list .content table,
+.roomlist-view .list .content tbody { display: block !important; width: 100% !important; }
+.roomlist-view .list .content colgroup { display: none !important; }
+.roomlist-view .list .content tbody[data-hook=list] {
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+	gap: calc(10px * var(--hx-d));
+	padding: 4px 8px 14px 2px !important;
 }
 
-.roomlist-view thead th {
-	font-family: var(--hx-font-display) !important;
-	font-size: 11px !important;
-	font-weight: 800 !important;
-	letter-spacing: 0.1em !important;
-	text-transform: uppercase !important;
-	color: #92a4bc !important;
-	padding: 8px 14px !important;
-	border: none !important;
-}
-
-.roomlist-view tbody tr {
-	background: rgba(14, 24, 44, 0.65) !important;
-	border: 1px solid rgba(255, 255, 255, 0.05) !important;
-	border-radius: 12px !important;
-	transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
-	cursor: pointer !important;
-}
-
-.roomlist-view tbody tr td {
-	padding: calc(9px * var(--hx-d)) 14px !important;
-	border: none !important;
-	font-size: 14px !important;
-}
-
-.roomlist-view tbody tr td:first-child {
-	border-radius: 12px 0 0 12px !important;
-	font-weight: 600 !important;
-	color: #ffffff !important;
+.roomlist-view .list .content tbody tr {
+	display: grid !important;
+	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-areas: "n p" "d k";
+	align-items: center;
+	gap: 6px 10px;
+	padding: calc(12px * var(--hx-d)) 14px !important;
+	background: linear-gradient(160deg, rgba(27, 50, 88, 0.55) 0%, rgba(10, 19, 36, 0.78) 100%) !important;
+	border: 1px solid rgba(208, 184, 120, 0.14) !important;
 	border-left: 3px solid transparent !important;
+	border-radius: 14px !important;
+	cursor: pointer !important;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease !important;
 }
-
-.roomlist-view tbody tr td:last-child {
-	border-radius: 0 12px 12px 0 !important;
+.roomlist-view .list .content tbody tr[style*="display: none"] { display: none !important; }
+.roomlist-view .list .content tbody tr:hover {
+	border-color: rgba(208, 184, 120, 0.55) !important;
+	box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4), 0 0 14px rgba(208, 184, 120, 0.16) !important;
 }
-
-.roomlist-view tbody tr:hover td,
-.roomlist-view tbody tr.selected td {
-	background: rgba(26, 46, 80, 0.88) !important;
+.roomlist-view .list .content tbody tr.selected {
+	border-color: var(--hx-gold) !important;
+	border-left-color: var(--hx-gold) !important;
+	background: linear-gradient(160deg, rgba(45, 79, 138, 0.7) 0%, rgba(14, 26, 49, 0.88) 100%) !important;
+	box-shadow: 0 0 0 1px rgba(208, 184, 120, 0.45), 0 10px 26px rgba(0, 0, 0, 0.45) !important;
 }
-
-.roomlist-view tbody tr:hover {
-	transform: translateY(-1px) scale(1.002) !important;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 14px rgba(208, 184, 120, 0.18) !important;
+.roomlist-view .list .content tbody tr td { padding: 0 !important; border: none !important; background: none !important; min-width: 0; }
+.roomlist-view .list .content tbody tr td:nth-child(1) {
+	grid-area: n; font-size: 15px !important; font-weight: 700 !important; color: #ffffff !important;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-
-.roomlist-view tbody tr:hover td:first-child,
-.roomlist-view tbody tr.selected td:first-child {
-	border-left: 3px solid var(--hx-gold) !important;
+.roomlist-view .list .content tbody tr td:nth-child(2) {
+	grid-area: p; justify-self: end; padding: 2px 10px !important; border-radius: 999px;
+	background: rgba(208, 184, 120, 0.14) !important; color: #f3e7c4 !important; font-weight: 800 !important; font-size: 13px !important;
+	font-variant-numeric: tabular-nums;
 }
+.roomlist-view .list .content tbody tr td:nth-child(3) {
+	grid-area: k; justify-self: end; font-size: 11px !important; letter-spacing: 0.06em; text-transform: uppercase; color: #8fa2bf !important;
+}
+.roomlist-view .list .content tbody tr td:nth-child(3)::before { content: "Clave: "; opacity: 0.7; }
+.roomlist-view .list .content tbody tr td:nth-child(4) { grid-area: d; font-size: 12px !important; color: #a9bcd8 !important; }
 
 .roomlist-view input[type=checkbox] {
 	accent-color: var(--hx-gold) !important;
