@@ -29,11 +29,12 @@ const walk = (node: Element, depth: number, lines: string[]): void => {
 	const id = node.id || "";
 	if (id.startsWith("hax-")) return; // el propio panel del cliente
 	let line = "  ".repeat(depth) + describe(node);
-	if (depth <= 2) {
+	if (depth <= 3) {
 		try {
 			const cs = (node.ownerDocument.defaultView as Window).getComputedStyle(node);
 			const img = cs.backgroundImage !== "none" ? ` img=${cs.backgroundImage.slice(0, 40)}` : "";
-			line += `  {bg ${cs.backgroundColor}${img}}`; // sirve para ubicar el pasto verde
+			const r = node.getBoundingClientRect();
+			line += `  {bg ${cs.backgroundColor}${img} | ${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} pos=${cs.position} disp=${cs.display}}`; // ubica el pasto y las medidas
 		} catch { /* sin acceso */ }
 	}
 	lines.push(line);

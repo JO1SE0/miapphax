@@ -1,6 +1,9 @@
 {
 	"fps_unlock": true,
 	"low_latency": true,
+	"fps_mode": false,
+	"ui_blur": true,
+	"risky_flags": false,
 	"reduce_effects": false,
 	"lines_enabled": true,
 	"line_width_field": 1.5,
@@ -11,7 +14,7 @@
 	"theme_accent2": "#d0b878",
 	"theme_glow": "",
 	"theme_glow_strength": 0.35,
-	"theme_radius": 8,
+	"theme_radius": 12,
 	"theme_cards": true,
 	"theme_card_style": "glass",
 	"theme_density": 1,

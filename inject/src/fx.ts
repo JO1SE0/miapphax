@@ -5,7 +5,7 @@
 //  * borde que late en los ultimos segundos del partido
 //  * entrada animada al abrir la app
 //  * escudo muy tenue en el fondo del menu (lo usa bg.ts)
-// Se apagan con Low Latency (esos modos buscan el minimo trabajo de dibujo).
+// Se apagan con el "Modo FPS maximo" del panel (Rendimiento).
 // Detecta el gol mirando el marcador del juego: [data-hook=red-score] y [data-hook=blue-score].
 
 import { BRAND_LOGO } from "./brand";
@@ -43,7 +43,7 @@ export const readFx = (prefs: any): FxConfig => ({
 	cinematic: prefs?.fx_cinematic ?? FX_DEFAULTS.cinematic,
 	edge: prefs?.fx_edge ?? FX_DEFAULTS.edge,
 	splash: prefs?.fx_splash ?? FX_DEFAULTS.splash,
-	lowLatency: prefs?.low_latency === true,
+	lowLatency: prefs?.fps_mode === true, // "modo FPS maximo": apaga los efectos
 	logo: typeof prefs?.club_logo === "string" && prefs.club_logo ? prefs.club_logo : "",
 });
 

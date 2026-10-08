@@ -339,12 +339,26 @@ const buildPerf = async (): Promise<HTMLElement> => {
 	box.appendChild(el("p", "hx-sub", "Opciones para bajar el delay. Las marcadas con reinicio se leen una sola vez al abrir la app."));
 
 	box.appendChild(group("Recomendado"));
-	box.appendChild(restartSwitch("Modo baja latencia", "Sin recorte de rendimiento en segundo plano, GPU para el canvas y sin limite de eventos de teclado", "low_latency", p?.low_latency === true, "reinicio"));
-	box.appendChild(restartSwitch("FPS ilimitado", "Sin vsync ni tope de cuadros. Puede verse algo de tearing", "fps_unlock", p?.fps_unlock === true, "reinicio"));
+	box.appendChild(restartSwitch("Modo baja latencia", "Sin recorte de rendimiento en segundo plano, GPU para el canvas y sin limite de eventos de teclado", "low_latency", p?.low_latency !== false, "reinicio"));
+	box.appendChild(restartSwitch("FPS ilimitado", "Sin vsync ni tope de cuadros. Puede verse algo de tearing", "fps_unlock", p?.fps_unlock !== false, "reinicio"));
 	box.appendChild(restartSwitch("GPU dedicada", "En laptops con dos placas, usa la potente", "force_gpu", p?.force_gpu === true, "reinicio"));
-	box.appendChild(restartSwitch("Prioridad alta de CPU", "El sistema atiende primero a la app cuando la PC esta cargada", "high_priority", p?.high_priority === true, "reinicio"));
+	box.appendChild(restartSwitch("Prioridad alta de CPU", "El sistema atiende primero a la app cuando la PC esta cargada", "high_priority", p?.high_priority !== false, "reinicio"));
+
+	box.appendChild(group("Visuales vs. FPS"));
+	box.appendChild(el("p", "hx-sub", "Nada se borra: son interruptores para apagar lo visual cuando quieras mas cuadros por segundo."));
+	box.appendChild(switchRow("Modo FPS maximo", "Apaga efectos de gol, borde, entrada animada, desenfoques y animaciones del menu", p?.fps_mode === true, (on) => {
+		updateFx({ lowLatency: on });
+		updateThemeLive({ lowGpu: on });
+		SAVE("fps_mode", on);
+	}));
+	box.appendChild(switchRow("Desenfoque de tarjetas", "El cristal esmerilado de menus y dialogos (cuesta GPU)", p?.ui_blur !== false, (on) => {
+		updateThemeLive({ noBlur: !on });
+		SAVE("ui_blur", on);
+	}));
+	box.appendChild(el("p", "hx-sub", "Tambien podes apagar por separado cada extra en Cancha y Extras (estela, marca de agua, degradé en movimiento, efectos)."));
 
 	box.appendChild(group("Experimental"));
+	box.appendChild(restartSwitch("Flags agresivos de GPU", "Raster por GPU forzado y sin raster por software. Mas FPS en algunas PCs, pero puede dejar la ventana en blanco: si pasa, apagalo", "risky_flags", p?.risky_flags === true, "reinicio"));
 	box.appendChild(switchRow("Canvas de baja latencia", "Pide al navegador un canvas desincronizado. Sirve desde la proxima sala que abras",
 		p?.canvas_desync === true, (on) => { updateLinesLive({ desync: on }); SAVE("canvas_desync", on); }, "sala nueva"));
 	box.appendChild(restartSwitch("GPU en el mismo proceso", "Menos comunicacion entre procesos, pero si la GPU falla se cierra la app", "in_process_gpu", p?.in_process_gpu === true, "reinicio"));
@@ -370,7 +384,7 @@ const buildPitch = async (): Promise<HTMLElement> => {
 		SAVE("bg_crest", on);
 		refreshBackground();
 	}));
-	box.appendChild(switchRow("Degradé en movimiento", "Se mueve despacio en el menu. Se apaga solo con Low Latency", l.bgAnim, (on) => {
+	box.appendChild(switchRow("Degradé en movimiento", "Se mueve despacio en el menu. Se apaga con el Modo FPS maximo", l.bgAnim, (on) => {
 		updateLinesLive({ bgAnim: on });
 		SAVE("bg_anim", on);
 		refreshBackground();
@@ -580,7 +594,7 @@ const buildExtras = async (): Promise<HTMLElement> => {
 	box.appendChild(el("p", "hx-sub", "El sonido original del gol y de la patada viene dentro del juego y no lo puedo reemplazar: el tuyo suena ademas del original."));
 
 	box.appendChild(group("Efectos"));
-	box.appendChild(el("p", "hx-sub", "Se apagan solos con Low Latency (ahi se evita todo dibujo extra)."));
+	box.appendChild(el("p", "hx-sub", "Se apagan con el Modo FPS maximo (Rendimiento)."));
 	const fx = getFx();
 	box.appendChild(switchRow("Efectos activados", "Interruptor general", fx.enabled, (on) => { updateFx({ enabled: on }); SAVE("fx_enabled", on); }));
 	box.appendChild(switchRow("Banner de gol", "Cartel animado con destello del color del equipo", fx.banner, (on) => { updateFx({ banner: on }); SAVE("fx_banner", on); }));

@@ -7,7 +7,8 @@ export type CardStyle = "glass" | "solid" | "flat";
 export type SkinOptions = {
 	cardStyle: CardStyle;
 	density: number; // 0.6 compacto ... 1 normal ... 1.6 amplio
-	lowGpu: boolean; // sin blur si está en modo ultra baja latencia
+	lowGpu: boolean; // modo FPS máximo: sin blur ni animaciones
+	noBlur?: boolean; // solo sin desenfoque
 };
 
 const clamp = (n: number, min: number, max: number): number =>
@@ -16,7 +17,7 @@ const clamp = (n: number, min: number, max: number): number =>
 export const buildSkinCss = (o: SkinOptions): string => {
 	const d = clamp(Number.isFinite(o.density) ? o.density : 1, 0.5, 1.8);
 	const style: CardStyle = ["glass", "solid", "flat"].includes(o.cardStyle) ? o.cardStyle : "glass";
-	const blur = o.lowGpu || style !== "glass" ? 0 : 18;
+	const blur = o.lowGpu || o.noBlur || style !== "glass" ? 0 : 18;
 
 	const cardBg =
 		style === "glass" ? "rgba(10, 19, 36, 0.86)" : style === "solid" ? "#0c162b" : "rgba(18, 30, 52, 0.75)";
@@ -40,7 +41,6 @@ export const buildSkinCss = (o: SkinOptions): string => {
 	--hx-navy-deep: #070e1c;
 	--hx-red: #ef4444;
 	--hx-blue: #3b82f6;
-	--hx-radius: 12px;
 }
 
 /* ---------- Fondo general y tipografía global ---------- */
@@ -152,17 +152,9 @@ select {
 }
 
 /* ---------- Lista de Salas (Roomlist View) ---------- */
-.roomlist-view {
-	max-width: 1060px !important;
-	margin: 20px auto !important;
-	padding: 24px !important;
-	background: var(--hx-card-bg) !important;
-	border: 1px solid var(--hx-card-border) !important;
-	border-radius: 20px !important;
-	box-shadow: var(--hx-card-shadow) !important;
-	-webkit-backdrop-filter: blur(var(--hx-blur)) !important;
-	backdrop-filter: blur(var(--hx-blur)) !important;
-}
+/* .roomlist-view es la vista de pantalla completa del juego: NO se le pone ancho maximo ni margen
+   (si no, se achica y deja ver lo que hay detras). La tarjeta es el .dialog que tiene adentro. */
+.roomlist-view .dialog { max-width: 1060px !important; }
 
 .roomlist-view table {
 	border-collapse: separate !important;
@@ -463,6 +455,15 @@ select {
 	background-clip: text !important;
 	-webkit-text-fill-color: transparent !important;
 }
+
+/* crest y bloques azules heredados del header original */
+.tl-crest { height: 28px !important; width: 28px !important; max-width: 28px !important; object-fit: contain; vertical-align: middle; margin-right: 10px; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); }
+.header.tl-header .left-container .title, .header.tl-header .left-container .title a { background: none !important; box-shadow: none !important; border: none !important; padding-left: 0 !important; }
+.header.tl-header .right-container .title {
+	background: rgba(208, 184, 120, 0.1) !important; border: 1px solid rgba(208, 184, 120, 0.4) !important; border-radius: 999px !important;
+	padding: 0 14px !important; box-shadow: none !important; margin-left: 0 !important;
+}
+.header.tl-header .right-container .title a { background: none !important; color: #f3ead2 !important; font-weight: 700; }
 
 /* ---------- Scrollbars y Detalles ---------- */
 ::-webkit-scrollbar {
