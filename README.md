@@ -1,4 +1,6 @@
-# TL App by og
+# TL App by miclo
+
+_Fork maintained by miclo, based on [oghb/haxball-client](https://github.com/oghb/haxball-client) (GPL-3.0)._
 
 Unofficial client for the browser game [HaxBall](https://www.haxball.com/play), built with [Electron](https://github.com/electron/electron) and shipping with the browser extension [HaxBall All-in-one Tool](https://github.com/JO1SE0/miapphax).
 

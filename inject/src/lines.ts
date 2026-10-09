@@ -66,6 +66,7 @@ export const DEFAULT_CONFIG: LinesConfig = {
 };
 
 // ¿Es un color de texto tipo pasto (verde)? Los patrones se detectan aparte.
+const bgGradientCache = new WeakMap<object, { key: string; grad: CanvasGradient }>();
 const isGreenish = (style: any): boolean => {
 	if (typeof style !== "string") return false;
 	let r = 0, g = 0, b = 0;
@@ -233,10 +234,17 @@ export const installLinePatch = (win: any): boolean => {
 					(textures.has(this.fillStyle) || isGreenish(this.fillStyle))
 				) {
 					const style = this.fillStyle;
-					const g = this.createLinearGradient(0, 0, canvas.width * 0.35, canvas.height);
-					g.addColorStop(0, cfg.bgFrom);
-					g.addColorStop(1, cfg.bgTo);
-					this.fillStyle = g;
+					// el degradado se reutiliza entre cuadros (crearlo 60+ veces por segundo genera basura y tirones de GC)
+					const gkey = `${canvas.width}x${canvas.height}|${cfg.bgFrom}|${cfg.bgTo}`;
+					let g = bgGradientCache.get(this);
+					if (!g || g.key !== gkey) {
+						const grad = this.createLinearGradient(0, 0, canvas.width * 0.35, canvas.height);
+						grad.addColorStop(0, cfg.bgFrom);
+						grad.addColorStop(1, cfg.bgTo);
+						g = { key: gkey, grad };
+						bgGradientCache.set(this, g);
+					}
+					this.fillStyle = g.grad;
 					try {
 						return originalFillRect.apply(this, args);
 					} finally {
