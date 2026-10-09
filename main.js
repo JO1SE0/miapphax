@@ -146,6 +146,7 @@ app.commandLine.appendSwitch('force-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
 app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // Flags agresivos: pueden dejar la ventana en blanco o con glitches en algunas PCs/drivers,
 // por eso solo se activan desde Rendimiento > Experimental > "Flags agresivos de GPU".
 if (preferences.risky_flags === true) {
@@ -370,6 +371,19 @@ ipcMain.handle('set-app-preference', async (event, key, value) => {
   // console.log('Received preference:', key, value);
   const prefs = loadAppPreferences();
   prefs[key] = value;
+  saveAppPreferences(prefs);
+});
+
+ipcMain.handle('set-app-preferences', async (event, updates) => {
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
+    throw new TypeError('Preference updates must be an object');
+  }
+  const entries = Object.entries(updates);
+  if (entries.some(([key, value]) => !/^[a-zA-Z0-9_]+$/.test(key) || !['string', 'number', 'boolean'].includes(typeof value))) {
+    throw new TypeError('Preference updates must contain valid keys and primitive values');
+  }
+  const prefs = loadAppPreferences();
+  for (const [key, value] of entries) prefs[key] = value;
   saveAppPreferences(prefs);
 });
 

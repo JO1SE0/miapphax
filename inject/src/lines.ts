@@ -58,6 +58,10 @@ export const DEFAULT_CONFIG: LinesConfig = {
 	bgTo: "#08101f",
 	bgAnim: false,
 	bgCrest: true,
+	trajectoryEnabled: false,
+	trajectoryLength: 600,
+	trajectoryColor: "#d0b878",
+	trajectoryWidth: 2,
 	...COS_DEFAULTS,
 };
 
@@ -128,8 +132,9 @@ export const installLinePatch = (win: any): boolean => {
 
 	// ---- stroke: grosor de lineas -------------------------------------------
 	proto.stroke = function (this: any, ...args: any[]) {
+		if (this.__hxTrajectoryDrawing) return originalStroke.apply(this, args);
 		const cfg: LinesConfig | undefined = win[CONFIG_KEY];
-		if (!cfg || (!cfg.enabled && !cfg.debug)) {
+		if (!cfg || cfg.lowPerformance || (!cfg.enabled && !cfg.debug)) {
 			return originalStroke.apply(this, args);
 		}
 
@@ -186,7 +191,7 @@ export const installLinePatch = (win: any): boolean => {
 		// ejecuta la operacion con un color liso y despues restaura el patron.
 		const withFlatFill = (ctx: any, run: () => any): any => {
 			const cfg: LinesConfig | undefined = win[CONFIG_KEY];
-			if (cfg?.flatPitch) {
+			if (cfg?.flatPitch && !cfg.lowPerformance) {
 				const style = ctx.fillStyle;
 				const image = typeof style === "object" && style ? textures.get(style) : undefined;
 				if (image) {
@@ -219,6 +224,7 @@ export const installLinePatch = (win: any): boolean => {
 				const canvas = this.canvas;
 				if (
 					cfg?.bgEnabled &&
+					!cfg.lowPerformance &&
 					canvas &&
 					args[0] === 0 &&
 					args[1] === 0 &&
@@ -295,6 +301,16 @@ const readConfigFromPrefs = (prefs: any): LinesConfig => ({
 	bgTo: /^#[0-9a-f]{6}$/i.test(prefs?.bg_to) ? prefs.bg_to : DEFAULT_CONFIG.bgTo,
 	bgAnim: prefs?.bg_anim === true,
 	bgCrest: prefs?.bg_crest ?? true,
+	trajectoryEnabled: prefs?.trajectory_enabled === true,
+	trajectoryLength: Math.min(1500, Math.max(150, num(prefs?.trajectory_length, DEFAULT_CONFIG.trajectoryLength))),
+	trajectoryColor: /^#[0-9a-f]{6}$/i.test(prefs?.trajectory_color) ? prefs.trajectory_color : DEFAULT_CONFIG.trajectoryColor,
+	trajectoryWidth: Math.min(5, Math.max(1, num(prefs?.trajectory_width, DEFAULT_CONFIG.trajectoryWidth))),
+	assistShotAngles: prefs?.assist_shot_angles === true,
+	assistPassLines: prefs?.assist_pass_lines === true,
+	assistBallDistance: prefs?.assist_ball_distance === true,
+	assistBlockedShot: prefs?.assist_blocked_shot === true,
+	assistTeamMode: ["auto", "red", "blue"].includes(prefs?.assist_team_mode) ? prefs.assist_team_mode : DEFAULT_CONFIG.assistTeamMode,
+	assistAttackDirection: ["auto", "left", "right"].includes(prefs?.assist_attack_direction) ? prefs.assist_attack_direction : DEFAULT_CONFIG.assistAttackDirection,
 	wmEnabled: prefs?.wm_enabled === true,
 	wmOpacity: Math.min(0.5, Math.max(0.02, Number(prefs?.wm_opacity) || COS_DEFAULTS.wmOpacity)),
 	wmSize: Math.min(400, Math.max(60, Number(prefs?.wm_size) || COS_DEFAULTS.wmSize)),
@@ -304,6 +320,7 @@ const readConfigFromPrefs = (prefs: any): LinesConfig => ({
 	ballScale: clampScale(prefs?.vis_ball_scale),
 	ballColor: /^#[0-9a-f]{6}$/i.test(prefs?.vis_ball_color) ? prefs.vis_ball_color : "",
 	ballTrail: prefs?.vis_ball_trail === true,
+	lowPerformance: prefs?.fps_mode === true,
 });
 
 const getGameWindow = (): any => {
@@ -315,8 +332,8 @@ const getGameWindow = (): any => {
 	}
 };
 
-// Se llama seguido (cada 100 ms): si hay un iframe nuevo lo parchea de inmediato,
-// asi el parche llega antes de que el juego cree sus patrones y su canvas.
+let observedFrame: HTMLIFrameElement | null = null;
+
 const pushToGame = (): void => {
 	const win = getGameWindow();
 	if (!win) return;
@@ -365,8 +382,7 @@ export const toggleLines = async (): Promise<void> => {
 	toast(enabled ? "Lineas finas: ON" : "Lineas finas: OFF (originales)");
 };
 
-// Lee las preferencias y vigila cada 100 ms si hay un iframe de juego nuevo
-// para parchearlo (el iframe se recrea cada vez que entras a una sala).
+// Detecta la carga o reemplazo del iframe para parchear antes de que el juego dibuje.
 export const startLinesWatcher = async (): Promise<void> => {
 	try {
 		current = readConfigFromPrefs(await window.electronAPI.getAppPreferences());
@@ -382,6 +398,25 @@ export const startLinesWatcher = async (): Promise<void> => {
 		console.log("[haxlines] debug", on ? "ON (entra a una sala y mira los logs)" : "OFF");
 	};
 
-	pushToGame();
-	setInterval(pushToGame, 100);
+	const bindGameFrame = (): void => {
+		const frame = document.getElementsByClassName("gameframe")[0] as HTMLIFrameElement | undefined;
+		if (!frame || frame === observedFrame) return;
+		if (observedFrame) observedFrame.removeEventListener("load", pushToGame);
+		observedFrame = frame;
+		frame.addEventListener("load", pushToGame);
+		pushToGame();
+	};
+
+	new MutationObserver((records) => {
+		const frameAdded = records.some(({ addedNodes }) =>
+			Array.from(addedNodes).some((node) =>
+				node instanceof Element && (node.matches(".gameframe") || !!node.querySelector(".gameframe"))
+			)
+		);
+		if (frameAdded) bindGameFrame();
+	}).observe(document.body, {
+		childList: true,
+		subtree: true,
+	});
+	bindGameFrame();
 };

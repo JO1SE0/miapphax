@@ -39,11 +39,19 @@ async function init() {
             // we disregard changes in localstorage
             // and load it from preferences.json
             console.log("Loading", currentProfile)
-            loadProfileToLocalStorage(currentProfile.id);
+            try {
+                await loadProfileToLocalStorage(currentProfile.id);
+            } catch (error) {
+                console.error("Failed to initialize the selected profile:", error);
+                window.electronAPI.notifyReadyToShow();
+                return;
+            }
         }
         location.reload();
         return;
     }
+
+    await startFx();
 
     // finally show window to user
     window.electronAPI.notifyReadyToShow();
@@ -59,7 +67,6 @@ async function init() {
     startBackgroundWatcher();
     startDiscordPresence();
     startExtras();
-    startFx();
     startTray();
 
     try {

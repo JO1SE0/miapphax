@@ -1,4 +1,4 @@
-// admin kick/ban shortcuts by xenon
+// Admin kick/ban shortcuts
 function createKickBanButtons(x, admin) {
 	var displayCheck = (admin ? 'inline' : 'none');
 	
@@ -30,7 +30,7 @@ function createKickBanButtons(x, admin) {
 	x.appendChild(banBtn);
 }
 
-// admin kick/ban shortcuts by xenon
+// Admin kick/ban shortcuts
 function kickPlayer(x, ban) {
 	var gameframe = document.getElementsByClassName('gameframe')[0];
 	var ev3 = new MouseEvent("contextmenu", {
@@ -49,7 +49,7 @@ function kickPlayer(x, ban) {
 	gameframe.contentWindow.document.querySelector('[data-hook="kick"]').click();
 }
 
-// admin kick/ban shortcuts by xenon
+// Admin kick/ban shortcuts
 function checkForButtons(x, admin) {
 	var displayCheck = (admin ? 'inline' : 'none');
 	if(x.childNodes.length == 3) {

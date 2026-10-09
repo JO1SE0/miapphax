@@ -378,8 +378,9 @@ generalSection.appendChild(discordRPCRow);
 			.then(result => {
 				if (result.success) {
 					customAlert("Backup restored", "The app will restart in a few seconds (or do it manually)...", []);
-					loadProfileToLocalStorage("default");
-					setTimeout(() => window.electronAPI.restartApp(), 4000);
+					void loadProfileToLocalStorage("default")
+						.then(() => setTimeout(() => window.electronAPI.restartApp(), 4000))
+						.catch(error => console.error("Failed to load restored profile:", error));
 				} else {
 					importBackupButton.textContent = "Invalid backup!";
 					importBackupButton.disabled = true;

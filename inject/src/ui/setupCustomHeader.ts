@@ -24,7 +24,7 @@ const aboutAlert = (): void => {
 
         <b>Credits</b>
         • <a target="_blank" href=https://github.com/electron/electron>Electron</a>, for making this app's creation easy
-        • <a target="_blank" href=https://github.com/xenonsb/Haxball-Room-Extension>All-in-one Tool</a>, for improving HaxBall and open sourcing their code`,
+        • <a target="_blank" href=https://github.com/JO1SE0/miapphax>All-in-one Tool</a>, for improving HaxBall and open sourcing its code`,
         []
     );
 }

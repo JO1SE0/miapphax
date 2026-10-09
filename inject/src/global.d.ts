@@ -4,6 +4,7 @@ declare global {
 	interface Window {
 		electronAPI: {
 			setAppPreference: (key: string, value: any) => Promise<any>;
+			setAppPreferences: (updates: Record<string, string | number | boolean>) => Promise<any>;
 			getAppPreferences: () => Promise<any>;
 			restartApp: () => void;
 			notifyReadyToShow: () => void;

@@ -247,8 +247,7 @@ const notify = (title: string, body: string): void => {
 const checkFavorites = (doc: Document): void => {
 	const rows = doc.querySelectorAll('[data-hook="list"] tr');
 	if (!rows.length) { prevFavs = null; return; }
-	let favs: string[] = [];
-	try { favs = JSON.parse(localStorage.getItem("fav_rooms") || "[]"); } catch { /* vacio */ }
+	const favs = getFavoriteRooms();
 	if (!favs.length) return;
 	const now = new Map<string, string>();
 	rows.forEach((row) => {
@@ -261,6 +260,30 @@ const checkFavorites = (doc: Document): void => {
 		});
 	}
 	prevFavs = new Set(now.keys());
+};
+
+export const getFavoriteRooms = (): string[] => {
+	try {
+		const value: unknown = JSON.parse(localStorage.getItem("fav_rooms") || "[]");
+		return Array.isArray(value) ? value.filter((room): room is string => typeof room === "string" && !!room.trim()) : [];
+	} catch {
+		return [];
+	}
+};
+
+export const joinRoomByName = (name: string): string => {
+	const doc = getDoc();
+	const rows = Array.from(doc?.querySelectorAll('[data-hook="list"] tr') || []);
+	const row = rows.find((candidate) =>
+		(candidate.querySelector('[data-hook="name"]')?.textContent || "").trim() === name
+	) as HTMLElement | undefined;
+	if (!row || !doc) return rows.length ? `No veo "${name}" en la lista (toca Refresh).` : "Abri la lista de salas y toca de nuevo.";
+	const win = doc.defaultView;
+	if (!win) return "No se pudo acceder a la lista de salas.";
+	row.click();
+	row.dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+	(doc.querySelector('[data-hook="join"]') as HTMLElement | null)?.click();
+	return `Entrando a "${name}"...`;
 };
 
 export const normalizeRoomLink = (raw: string): string | null => {
@@ -294,15 +317,8 @@ export const rejoinLastRoom = (): string => {
 	const name = cfg.lastRoom;
 	// 1) si la lista de salas esta abierta y la sala esta ahi, entra desde la lista
 	const rows = Array.from(doc?.querySelectorAll('[data-hook="list"] tr') || []);
-	const row = name
-		? (rows.find((r) => (r.querySelector('[data-hook="name"]')?.textContent || "").trim() === name) as HTMLElement | undefined)
-		: undefined;
-	if (row && doc) {
-		const win = doc.defaultView as any;
-		row.click();
-		row.dispatchEvent(new win.MouseEvent("dblclick", { bubbles: true, cancelable: true }));
-		(doc.querySelector('[data-hook="join"]') as HTMLElement | null)?.click();
-		return `Entrando a "${name}"...`;
+	if (name && rows.some((row) => (row.querySelector('[data-hook="name"]')?.textContent || "").trim() === name)) {
+		return joinRoomByName(name);
 	}
 	// 2) si habias entrado por link, vuelve por ese link
 	if (cfg.lastLink && joinRoomLink(cfg.lastLink)) return "Volviendo a la ultima sala...";
@@ -351,7 +367,7 @@ export const startExtras = async (): Promise<void> => {
 				window.electronAPI.setAppPreference("x_last_link", link);
 			});
 		} catch { /* iframe cambiando */ }
-	}, 1000);
+	}, 1500);
 	setInterval(() => {
 		const doc = getDoc();
 		if (!doc?.body) return;

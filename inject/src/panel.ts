@@ -1,12 +1,13 @@
 // panel.ts
-// Barra lateral con paneles de personalizacion: Aspecto, Rendim., Cancha y Ajustes.
+// Barra lateral con paneles de personalizacion: Aspecto, Rendimiento, Cancha, Extras y Ajustes.
 // F9 la muestra / oculta. Por defecto se oculta sola dentro de una sala.
 
 import { getLinesConfig, updateLinesLive } from "./lines";
+import type { LinesConfig } from "./lines";
 import { BRAND_LOGO } from "./brand";
-import { getFx, showGoal, updateFx } from "./fx";
-import { getExtras, getTeamPresent, playSound, rejoinLastRoom, sendChat, showToast, updateExtras } from "./extras";
-import { refreshBackground } from "./bg";
+import { getFx, playStartupSound, showGoal, updateFx } from "./fx";
+import { getExtras, getFavoriteRooms, getTeamPresent, joinRoomByName, playSound, rejoinLastRoom, sendChat, showToast, updateExtras } from "./extras";
+import { refreshBackground, setBackgroundPerformanceMode } from "./bg";
 import { openSettingsAlert } from "./settings";
 import { CLUB_THEME, PRESETS, getThemeConfig, isValidHex, updateThemeLive } from "./theme";
 import { copyToClipboard, dumpUiStructure } from "./uidump";
@@ -34,21 +35,21 @@ const SECTIONS: { id: SectionId; label: string; title: string }[] = [
 ];
 
 const CSS = `
-#${ROOT_ID} { position: fixed; top: 0; left: 0; bottom: 0; z-index: 2147483000; font-family: inherit; color: #e6e9ee; }
-#${ROOT_ID} .hx-hot { position: fixed; top: 0; left: 0; bottom: 0; width: 8px; z-index: 1; }
+#${ROOT_ID} { position: fixed; top: var(--hx-panel-top, 0px); left: 0; right: 0; bottom: 0; z-index: 2147483000; font-family: inherit; color: #e6e9ee; pointer-events: none; }
+#${ROOT_ID} .hx-hot { position: absolute; top: 0; left: 0; bottom: 0; width: 8px; z-index: 1; pointer-events: auto; }
 #${ROOT_ID}.hx-open .hx-hot, #${ROOT_ID}.hx-nohot .hx-hot { display: none; }
 #${ROOT_ID} .hx-logo { display: none; width: 46px; height: 46px; margin-bottom: 6px; border-radius: 12px; background: center / contain no-repeat; flex: 0 0 auto; }
 #${ROOT_ID} .hx-logo.on { display: block; }
 #${ROOT_ID} .hx-logo-preview { width: 52px; height: 52px; border-radius: 12px; background: rgba(255,255,255,.05) center / contain no-repeat; }
 #${ROOT_ID}:not(.hx-open) .hx-drawer { opacity: 0 !important; pointer-events: none !important; transform: translateX(-12px) !important; }
-#${ROOT_ID} .hx-bar { position: absolute; top: 0; left: 0; bottom: 0; width: ${WIDTH}px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; background: rgba(10,12,16,.88); backdrop-filter: blur(10px); border-right: 1px solid rgba(255,255,255,.06); transform: translateX(-100%); transition: transform .18s ease; pointer-events: none; }
+#${ROOT_ID} .hx-bar { position: absolute; top: 8px; left: 0; bottom: 12px; width: ${WIDTH}px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; box-sizing: border-box; background: rgba(10,12,16,.9); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.09); border-left: 0; border-radius: 0 16px 16px 0; box-shadow: 0 12px 36px rgba(0,0,0,.3); transform: translateX(-100%); transition: transform .18s ease; pointer-events: none; }
 #${ROOT_ID}.hx-open .hx-bar { transform: none; pointer-events: auto; }
 #${ROOT_ID} .hx-nav { width: 56px; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: transparent !important; border: 1px solid transparent !important; color: #9aa3b2 !important; cursor: pointer; font-size: 10px; font-weight: 600; }
 #${ROOT_ID} .hx-nav:hover { color: #fff !important; background: rgba(255,255,255,.06) !important; }
 #${ROOT_ID} .hx-nav.on { color: #fff !important; background: var(--hx-accent-soft, rgba(59,130,246,.3)) !important; border-color: var(--hx-accent, #3b82f6) !important; }
 #${ROOT_ID} .hx-nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 #${ROOT_ID} .hx-spacer { flex: 1; }
-#${ROOT_ID} .hx-drawer { position: absolute; top: 0; left: ${WIDTH}px; bottom: 0; width: 340px; padding: 18px 18px 24px; overflow-y: auto; box-sizing: border-box; background: rgba(13,16,21,.96); backdrop-filter: blur(14px); border-right: 1px solid rgba(255,255,255,.06); box-shadow: 8px 0 30px rgba(0,0,0,.35); transform: translateX(-12px); opacity: 0; pointer-events: none; transition: transform .18s ease, opacity .18s ease; }
+#${ROOT_ID} .hx-drawer { position: absolute; top: 8px; left: ${WIDTH + 8}px; bottom: 12px; width: min(340px, calc(100vw - ${WIDTH + 32}px)); padding: 18px 18px 24px; overflow-y: auto; box-sizing: border-box; background: rgba(13,16,21,.96); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.09); border-radius: 16px; box-shadow: 8px 12px 36px rgba(0,0,0,.38); transform: translateX(-12px); opacity: 0; pointer-events: none; transition: transform .18s ease, opacity .18s ease; }
 #${ROOT_ID} .hx-drawer.open { transform: none; opacity: 1; pointer-events: auto; }
 #${ROOT_ID} h2 { margin: 0 0 4px; font-size: 18px; color: #fff; }
 #${ROOT_ID} .hx-sub { margin: 0 0 16px; font-size: 12px; color: #8b94a3; line-height: 1.4; }
@@ -66,6 +67,7 @@ const CSS = `
 #${ROOT_ID} .hx-slider { display: flex; align-items: center; gap: 10px; flex: 0 0 160px; }
 #${ROOT_ID} .hx-slider input { flex: 1; min-width: 0; accent-color: var(--hx-accent, #3b82f6); }
 #${ROOT_ID} .hx-val { flex: 0 0 38px; text-align: right; font-size: 12px; color: #b7bfcc; font-variant-numeric: tabular-nums; }
+#${ROOT_ID} .hx-select { min-width: 112px; padding: 7px 9px; color: #e6e9ee; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; }
 #${ROOT_ID} .hx-swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; max-width: 170px; }
 #${ROOT_ID} .hx-dot { width: 24px; height: 24px; padding: 0 !important; border-radius: 50% !important; border: none !important; cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; }
 #${ROOT_ID} .hx-dot.on { outline-color: #fff; }
@@ -77,12 +79,190 @@ const CSS = `
 #${ROOT_ID} .hx-seg { display: flex; flex: 0 0 auto; padding: 2px; gap: 2px; border-radius: 10px; background: rgba(255,255,255,.06); }
 #${ROOT_ID} .hx-seg button { padding: 5px 10px; font-size: 12px; font-weight: 600; color: #b7bfcc !important; background: transparent !important; border: none !important; cursor: pointer; }
 #${ROOT_ID} .hx-seg button.on { color: #fff !important; background: var(--hx-accent, #3b82f6) !important; }
+#${ROOT_ID} .hx-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 14px; }
+#${ROOT_ID} .hx-preset { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; min-height: 58px; }
+#${ROOT_ID} .hx-preset small { color: #9aa3b2; font-size: 10px; font-weight: 400; line-height: 1.3; }
 #${ROOT_ID} .hx-banner { margin-top: 16px; padding: 10px 12px; font-size: 12px; line-height: 1.4; border-radius: 8px; background: rgba(250,170,60,.12); border: 1px solid rgba(250,170,60,.35); color: #f5c27a; }
 #${ROOT_ID} .hx-banner .hx-btn { margin-top: 8px; width: 100%; }
+@media (max-height: 680px) {
+	#${ROOT_ID} .hx-bar { top: 8px; bottom: 8px; padding: 8px 0; gap: 2px; }
+	#${ROOT_ID} .hx-drawer { top: 8px; bottom: 8px; padding: 14px 14px 18px; }
+}
 `;
 
 const SAVE = (key: string, value: any): void => {
 	try { window.electronAPI.setAppPreference(key, value); } catch { /* sin preload */ }
+};
+
+const VISUAL_PREF_KEYS = [
+	"theme_enabled", "theme_cards", "theme_card_style", "theme_density",
+	"theme_accent", "theme_accent2", "theme_glow", "theme_glow_strength", "theme_radius", "ui_blur",
+	"club_logo",
+	"bg_enabled", "bg_from", "bg_to", "bg_anim", "bg_crest",
+	"lines_enabled", "line_width_field", "line_width_ball", "line_width_players",
+	"pitch_flat", "pitch_flat_color", "vis_enabled", "vis_my_scale", "vis_ball_scale",
+	"vis_ball_color", "vis_ball_trail", "wm_enabled", "wm_opacity", "wm_size",
+	"assist_shot_angles", "assist_pass_lines", "assist_ball_distance",
+	"assist_blocked_shot", "assist_team_mode", "assist_attack_direction",
+	"fx_enabled", "fx_banner", "fx_cinematic", "fx_edge", "fx_splash", "fx_splash_sound", "fx_red_color", "fx_blue_color",
+	"fps_mode",
+] as const;
+
+type VisualPrefKey = typeof VISUAL_PREF_KEYS[number];
+type VisualPrefValue = string | number | boolean;
+type VisualSnapshot = Partial<Record<VisualPrefKey, VisualPrefValue>>;
+
+const VISUAL_PRESETS: { name: string; hint: string; values: VisualSnapshot }[] = [
+	{
+		name: "Competitivo",
+		hint: "Interfaz solida y efectos de cancha reducidos.",
+		values: {
+			theme_enabled: true, theme_cards: true, theme_card_style: "solid", theme_density: 0.9,
+			theme_accent: "#2d4f8a", theme_accent2: "#d0b878", theme_glow: "", theme_glow_strength: 0.1,
+			theme_radius: 10, ui_blur: false, bg_enabled: true, bg_from: "#203860", bg_to: "#08101f",
+			bg_anim: false, bg_crest: false, lines_enabled: true, line_width_field: 1.5,
+			line_width_ball: 1, line_width_players: 1, pitch_flat: false, pitch_flat_color: "",
+			vis_enabled: true, vis_my_scale: 1, vis_ball_scale: 1, vis_ball_color: "", vis_ball_trail: false,
+			wm_enabled: false, wm_opacity: 0.12, wm_size: 160, assist_shot_angles: false,
+			assist_pass_lines: false, assist_ball_distance: false,
+			assist_blocked_shot: false, assist_team_mode: "auto", assist_attack_direction: "auto",
+			fx_enabled: true, fx_banner: true,
+			fx_cinematic: false, fx_edge: false, fx_splash: false, fx_splash_sound: false, fx_red_color: "#e56e56",
+			fx_blue_color: "#5689e5", fps_mode: false,
+		},
+	},
+	{
+		name: "Clasico",
+		hint: "Aspecto original y sin efectos agregados.",
+		values: {
+			theme_enabled: false, theme_cards: false, theme_card_style: "flat", theme_density: 1,
+			theme_accent: "#2d4f8a", theme_accent2: "#d0b878", theme_glow: "", theme_glow_strength: 0,
+			theme_radius: 8, ui_blur: false, bg_enabled: false, bg_from: "#203860", bg_to: "#08101f",
+			bg_anim: false, bg_crest: false, lines_enabled: false, line_width_field: 3,
+			line_width_ball: 2, line_width_players: 2, pitch_flat: false, pitch_flat_color: "",
+			vis_enabled: false, vis_my_scale: 1, vis_ball_scale: 1, vis_ball_color: "", vis_ball_trail: false,
+			wm_enabled: false, wm_opacity: 0.12, wm_size: 160, assist_shot_angles: false,
+			assist_pass_lines: false, assist_ball_distance: false,
+			assist_blocked_shot: false, assist_team_mode: "auto", assist_attack_direction: "auto",
+			fx_enabled: false, fx_banner: false,
+			fx_cinematic: false, fx_edge: false, fx_splash: false, fx_splash_sound: false, fx_red_color: "#e56e56",
+			fx_blue_color: "#5689e5", fps_mode: false,
+		},
+	},
+	{
+		name: "Festivo",
+		hint: "Colores vivos y celebracion de gol mas marcada.",
+		values: {
+			theme_enabled: true, theme_cards: true, theme_card_style: "glass", theme_density: 1,
+			theme_accent: "#ec4899", theme_accent2: "#06b6d4", theme_glow: "#ec4899",
+			theme_glow_strength: 0.45, theme_radius: 14, ui_blur: true, bg_enabled: true,
+			bg_from: "#4a1942", bg_to: "#101a40", bg_anim: false, bg_crest: true,
+			lines_enabled: true, line_width_field: 1.5, line_width_ball: 1, line_width_players: 1,
+			pitch_flat: false, pitch_flat_color: "", vis_enabled: true, vis_my_scale: 1,
+			vis_ball_scale: 1, vis_ball_color: "", vis_ball_trail: true, wm_enabled: false,
+			assist_shot_angles: false, assist_pass_lines: false,
+			assist_ball_distance: false, assist_blocked_shot: false, assist_team_mode: "auto",
+			assist_attack_direction: "auto",
+			wm_opacity: 0.12, wm_size: 160, fx_enabled: true, fx_banner: true, fx_cinematic: true,
+			fx_edge: true, fx_splash: true, fx_splash_sound: true, fx_red_color: "#ff5277", fx_blue_color: "#41c8ff",
+			fps_mode: false,
+		},
+	},
+];
+
+const isVisualSnapshot = (value: unknown): value is VisualSnapshot =>
+	!!value && typeof value === "object" && !Array.isArray(value) &&
+	Object.keys(value).every((key) =>
+		((VISUAL_PREF_KEYS as readonly string[]).includes(key) || key === "assist_bounce_zones") &&
+		["string", "number", "boolean"].includes(typeof (value as Record<string, unknown>)[key])
+	);
+
+const captureVisualSnapshot = (prefs: Record<string, unknown>): VisualSnapshot => {
+	const snapshot: VisualSnapshot = {};
+	for (const key of VISUAL_PREF_KEYS) {
+		const value = prefs[key];
+		if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+			snapshot[key] = value;
+		}
+	}
+	return snapshot;
+};
+
+const applyVisualSnapshot = async (snapshot: VisualSnapshot): Promise<void> => {
+	const theme: {
+		enabled?: boolean; cards?: boolean; cardStyle?: "glass" | "solid" | "flat"; density?: number;
+		accent?: string; accent2?: string; glow?: string; glowStrength?: number; radius?: number;
+		noBlur?: boolean; lowGpu?: boolean;
+	} = {};
+	if (typeof snapshot.theme_enabled === "boolean") theme.enabled = snapshot.theme_enabled;
+	if (typeof snapshot.theme_cards === "boolean") theme.cards = snapshot.theme_cards;
+	if (snapshot.theme_card_style === "glass" || snapshot.theme_card_style === "solid" || snapshot.theme_card_style === "flat") theme.cardStyle = snapshot.theme_card_style;
+	if (typeof snapshot.theme_density === "number") theme.density = snapshot.theme_density;
+	if (typeof snapshot.theme_accent === "string") theme.accent = snapshot.theme_accent;
+	if (typeof snapshot.theme_accent2 === "string") theme.accent2 = snapshot.theme_accent2;
+	if (typeof snapshot.theme_glow === "string") theme.glow = snapshot.theme_glow;
+	if (typeof snapshot.theme_glow_strength === "number") theme.glowStrength = snapshot.theme_glow_strength;
+	if (typeof snapshot.theme_radius === "number") theme.radius = snapshot.theme_radius;
+	if (typeof snapshot.ui_blur === "boolean") theme.noBlur = !snapshot.ui_blur;
+	if (typeof snapshot.fps_mode === "boolean") theme.lowGpu = snapshot.fps_mode;
+	updateThemeLive(theme);
+
+	const lines: Partial<LinesConfig> = {};
+	if (typeof snapshot.bg_enabled === "boolean") lines.bgEnabled = snapshot.bg_enabled;
+	if (typeof snapshot.bg_from === "string") lines.bgFrom = snapshot.bg_from;
+	if (typeof snapshot.bg_to === "string") lines.bgTo = snapshot.bg_to;
+	if (typeof snapshot.bg_anim === "boolean") lines.bgAnim = snapshot.bg_anim;
+	if (typeof snapshot.bg_crest === "boolean") lines.bgCrest = snapshot.bg_crest;
+	if (typeof snapshot.lines_enabled === "boolean") lines.enabled = snapshot.lines_enabled;
+	if (typeof snapshot.line_width_field === "number") lines.field = snapshot.line_width_field;
+	if (typeof snapshot.line_width_ball === "number") lines.ball = snapshot.line_width_ball;
+	if (typeof snapshot.line_width_players === "number") lines.players = snapshot.line_width_players;
+	if (typeof snapshot.pitch_flat === "boolean") lines.flatPitch = snapshot.pitch_flat;
+	if (typeof snapshot.pitch_flat_color === "string") lines.flatColor = snapshot.pitch_flat_color;
+	if (typeof snapshot.vis_enabled === "boolean") lines.cosEnabled = snapshot.vis_enabled;
+	if (typeof snapshot.vis_my_scale === "number") lines.myScale = snapshot.vis_my_scale;
+	if (typeof snapshot.vis_ball_scale === "number") lines.ballScale = snapshot.vis_ball_scale;
+	if (typeof snapshot.vis_ball_color === "string") lines.ballColor = snapshot.vis_ball_color;
+	if (typeof snapshot.vis_ball_trail === "boolean") lines.ballTrail = snapshot.vis_ball_trail;
+	if (typeof snapshot.assist_shot_angles === "boolean") lines.assistShotAngles = snapshot.assist_shot_angles;
+	if (typeof snapshot.assist_pass_lines === "boolean") lines.assistPassLines = snapshot.assist_pass_lines;
+	if (typeof snapshot.assist_ball_distance === "boolean") lines.assistBallDistance = snapshot.assist_ball_distance;
+	if (typeof snapshot.assist_blocked_shot === "boolean") lines.assistBlockedShot = snapshot.assist_blocked_shot;
+	if (snapshot.assist_team_mode === "auto" || snapshot.assist_team_mode === "red" || snapshot.assist_team_mode === "blue") {
+		lines.assistTeamMode = snapshot.assist_team_mode;
+	}
+	if (snapshot.assist_attack_direction === "auto" || snapshot.assist_attack_direction === "left" || snapshot.assist_attack_direction === "right") {
+		lines.assistAttackDirection = snapshot.assist_attack_direction;
+	}
+	if (typeof snapshot.wm_enabled === "boolean") lines.wmEnabled = snapshot.wm_enabled;
+	if (typeof snapshot.wm_opacity === "number") lines.wmOpacity = snapshot.wm_opacity;
+	if (typeof snapshot.wm_size === "number") lines.wmSize = snapshot.wm_size;
+	if (typeof snapshot.fps_mode === "boolean") lines.lowPerformance = snapshot.fps_mode;
+	if (typeof snapshot.club_logo === "string") lines.wmLogo = snapshot.club_logo;
+	updateLinesLive(lines);
+
+	const fx: { enabled?: boolean; banner?: boolean; cinematic?: boolean; edge?: boolean; splash?: boolean; splashSound?: boolean; lowLatency?: boolean; logo?: string; redColor?: string; blueColor?: string } = {};
+	if (typeof snapshot.fx_enabled === "boolean") fx.enabled = snapshot.fx_enabled;
+	if (typeof snapshot.fx_banner === "boolean") fx.banner = snapshot.fx_banner;
+	if (typeof snapshot.fx_cinematic === "boolean") fx.cinematic = snapshot.fx_cinematic;
+	if (typeof snapshot.fx_edge === "boolean") fx.edge = snapshot.fx_edge;
+	if (typeof snapshot.fx_splash === "boolean") fx.splash = snapshot.fx_splash;
+	if (typeof snapshot.fx_splash_sound === "boolean") fx.splashSound = snapshot.fx_splash_sound;
+	if (typeof snapshot.fps_mode === "boolean") fx.lowLatency = snapshot.fps_mode;
+	if (typeof snapshot.fx_red_color === "string") fx.redColor = snapshot.fx_red_color;
+	if (typeof snapshot.fx_blue_color === "string") fx.blueColor = snapshot.fx_blue_color;
+	if (typeof snapshot.club_logo === "string") fx.logo = snapshot.club_logo;
+	updateFx(fx);
+	if (typeof snapshot.club_logo === "string") setLogo(snapshot.club_logo);
+	if (typeof snapshot.fps_mode === "boolean") setBackgroundPerformanceMode(snapshot.fps_mode);
+	refreshBackground();
+
+	const updates: Partial<Record<VisualPrefKey, VisualPrefValue>> = {};
+	for (const key of VISUAL_PREF_KEYS) {
+		const value = snapshot[key];
+		if (value !== undefined) updates[key] = value;
+	}
+	await window.electronAPI.setAppPreferences(updates);
 };
 
 // ---- constructores de filas --------------------------------------------------
@@ -157,6 +337,27 @@ const sliderRow = (
 	box.appendChild(out);
 	row.appendChild(labelBlock(label, hint));
 	row.appendChild(box);
+	return row;
+};
+
+const selectRow = (
+	label: string,
+	value: string,
+	options: { value: string; label: string }[],
+	onChange: (value: string) => void,
+	hint?: string
+): HTMLDivElement => {
+	const row = el("div", "hx-row");
+	const select = el("select", "hx-select");
+	options.forEach(({ value: optionValue, label: optionLabel }) => {
+		const option = el("option", undefined, optionLabel);
+		option.value = optionValue;
+		select.appendChild(option);
+	});
+	select.value = value;
+	select.addEventListener("change", () => onChange(select.value));
+	row.appendChild(labelBlock(label, hint));
+	row.appendChild(select);
 	return row;
 };
 
@@ -244,6 +445,57 @@ const buildLook = async (): Promise<HTMLElement> => {
 	const box = el("div");
 	box.appendChild(el("h2", "", "Aspecto"));
 	box.appendChild(el("p", "hx-sub", "Todo se aplica al instante y queda guardado."));
+
+	box.appendChild(group("Estilos rápidos"));
+	box.appendChild(el("p", "hx-sub", "Cada estilo combina colores, cancha y efectos. Guarda tu configuración actual como Personalizado."));
+	const presetGrid = el("div", "hx-presets");
+	for (const preset of VISUAL_PRESETS) {
+		const button = el("button", "hx-btn ghost hx-preset");
+		button.append(el("span", "", preset.name), el("small", "", preset.hint));
+		button.addEventListener("click", () => {
+			void applyVisualSnapshot(preset.values).then(() => {
+				showToast(`Estilo ${preset.name} aplicado`);
+				openSection = null;
+				void showSection("look");
+			}).catch((error) => {
+				console.error("[panel] no se pudo aplicar el estilo", error);
+				showToast("No se pudo guardar el estilo");
+			});
+		});
+		presetGrid.appendChild(button);
+	}
+	const custom = prefs?.visual_preset_custom;
+	if (isVisualSnapshot(custom) && Object.keys(custom).length > 0) {
+		const button = el("button", "hx-btn ghost hx-preset");
+		button.append(el("span", "", "Personalizado"), el("small", "", "Aplicar tu estilo guardado."));
+		button.addEventListener("click", () => {
+			void applyVisualSnapshot(custom).then(() => {
+				showToast("Estilo personalizado aplicado");
+				openSection = null;
+				void showSection("look");
+			}).catch((error) => {
+				console.error("[panel] no se pudo aplicar el estilo personalizado", error);
+				showToast("No se pudo guardar el estilo");
+			});
+		});
+		presetGrid.appendChild(button);
+	}
+	box.appendChild(presetGrid);
+	const saveCustom = el("button", "hx-btn ghost", "Guardar como Personalizado");
+	saveCustom.style.width = "100%";
+	saveCustom.addEventListener("click", () => {
+		void window.electronAPI.getAppPreferences().then((current) =>
+			window.electronAPI.setAppPreference("visual_preset_custom", captureVisualSnapshot(current))
+		).then(() => {
+			showToast("Estilo personalizado guardado");
+			openSection = null;
+			void showSection("look");
+		}).catch((error) => {
+			console.error("[panel] no se pudo guardar el estilo personalizado", error);
+			showToast("No se pudo guardar el estilo");
+		});
+	});
+	box.appendChild(saveCustom);
 
 	box.appendChild(switchRow("Estilo moderno", "Apagado = look original de HaxBall", t.enabled, (on) => {
 		updateThemeLive({ enabled: on });
@@ -336,19 +588,21 @@ const buildPerf = async (): Promise<HTMLElement> => {
 	const p = await window.electronAPI.getAppPreferences();
 	const box = el("div");
 	box.appendChild(el("h2", "", "Rendimiento"));
-	box.appendChild(el("p", "hx-sub", "Opciones para bajar el delay. Las marcadas con reinicio se leen una sola vez al abrir la app."));
+	box.appendChild(el("p", "hx-sub", "Elige entre mas fluidez visual o mayor calidad. Los ajustes experimentales pueden causar fallos."));
 
-	box.appendChild(group("Recomendado"));
-	box.appendChild(restartSwitch("Modo baja latencia", "Sin recorte de rendimiento en segundo plano, GPU para el canvas y sin limite de eventos de teclado", "low_latency", p?.low_latency !== false, "reinicio"));
-	box.appendChild(restartSwitch("FPS ilimitado", "Sin vsync ni tope de cuadros. Puede verse algo de tearing", "fps_unlock", p?.fps_unlock !== false, "reinicio"));
+	box.appendChild(group("Sistema"));
+	box.appendChild(restartSwitch("Evitar suspensión de pantalla", "Evita que el sistema apague la pantalla mientras la app está abierta", "low_latency", p?.low_latency !== false, "reinicio"));
 	box.appendChild(restartSwitch("GPU dedicada", "En laptops con dos placas, usa la potente", "force_gpu", p?.force_gpu === true, "reinicio"));
 	box.appendChild(restartSwitch("Prioridad alta de CPU", "El sistema atiende primero a la app cuando la PC esta cargada", "high_priority", p?.high_priority !== false, "reinicio"));
 
-	box.appendChild(group("Visuales vs. FPS"));
-	box.appendChild(el("p", "hx-sub", "Nada se borra: son interruptores para apagar lo visual cuando quieras mas cuadros por segundo."));
-	box.appendChild(switchRow("Modo FPS maximo", "Apaga efectos de gol, borde, entrada animada, desenfoques y animaciones del menu", p?.fps_mode === true, (on) => {
+	box.appendChild(group("Cuadros por segundo"));
+	box.appendChild(restartSwitch("FPS ilimitado", "Quita el tope de cuadros; puede aumentar consumo y producir tearing", "fps_unlock", p?.fps_unlock !== false, "reinicio"));
+	box.appendChild(el("p", "hx-sub", "Para priorizar fluidez y reducir trabajo visual durante la partida:"));
+	box.appendChild(switchRow("Modo bajo rendimiento", "Desactiva efectos de gol, personalizaciones del canvas, fondos animados, desenfoques, sombras y animaciones. Se aplica al instante.", p?.fps_mode === true, (on) => {
 		updateFx({ lowLatency: on });
 		updateThemeLive({ lowGpu: on });
+		updateLinesLive({ lowPerformance: on });
+		setBackgroundPerformanceMode(on);
 		SAVE("fps_mode", on);
 	}));
 	box.appendChild(switchRow("Desenfoque de tarjetas", "El cristal esmerilado de menus y dialogos (cuesta GPU)", p?.ui_blur !== false, (on) => {
@@ -357,7 +611,7 @@ const buildPerf = async (): Promise<HTMLElement> => {
 	}));
 	box.appendChild(el("p", "hx-sub", "Tambien podes apagar por separado cada extra en Cancha y Extras (estela, marca de agua, degradé en movimiento, efectos)."));
 
-	box.appendChild(group("Experimental"));
+	box.appendChild(group("Avanzado (opcional)"));
 	box.appendChild(restartSwitch("Flags agresivos de GPU", "Raster por GPU forzado y sin raster por software. Mas FPS en algunas PCs, pero puede dejar la ventana en blanco: si pasa, apagalo", "risky_flags", p?.risky_flags === true, "reinicio"));
 	box.appendChild(switchRow("Canvas de baja latencia", "Pide al navegador un canvas desincronizado. Sirve desde la proxima sala que abras",
 		p?.canvas_desync === true, (on) => { updateLinesLive({ desync: on }); SAVE("canvas_desync", on); }, "sala nueva"));
@@ -465,31 +719,12 @@ const buildPitch = async (): Promise<HTMLElement> => {
 const buildSettings = async (): Promise<HTMLElement> => {
 	const box = el("div");
 	box.appendChild(el("h2", "", "Ajustes"));
-	box.appendChild(el("p", "hx-sub", "Atajos de chat, auth, backup y reinicio de la app."));
-	const open = el("button", "hx-btn", "Abrir ajustes avanzados");
+	box.appendChild(el("p", "hx-sub", "Herramientas generales, atajos, Auth, copias de seguridad y depuración."));
+	const open = el("button", "hx-btn", "Atajos, Auth y copias de seguridad");
 	open.style.width = "100%";
 	open.addEventListener("click", () => { closeDrawer(); openSettingsAlert(); });
 	box.appendChild(open);
-	box.appendChild(group("Discord"));
-	box.appendChild(el("p", "hx-sub", "Para que Discord diga TL App: crea una aplicacion llamada TL App en discord.com/developers, subi tu logo como 'client-logo' en Rich Presence > Art Assets y pega aca el Application ID. Reinicia la app despues."));
-	let currentId = "";
-	try { currentId = String((await window.electronAPI.getAppPreferences())?.discord_client_id || ""); } catch { /* vacio */ }
-	const idInput = document.createElement("input");
-	idInput.type = "text";
-	idInput.placeholder = "Application ID (solo numeros)";
-	idInput.value = currentId;
-	idInput.style.cssText = "width:100%;box-sizing:border-box;padding:8px 10px;margin-top:6px;font-size:13px;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);";
-	const idMsg = el("p", "hx-sub", "");
-	idInput.addEventListener("change", () => {
-		const v = idInput.value.trim();
-		if (v && !/^\d{15,25}$/.test(v)) { idMsg.textContent = "Id invalido: son solo numeros (17 a 20 digitos)."; return; }
-		SAVE("discord_client_id", v);
-		idMsg.textContent = v ? "Guardado. Reinicia la app para aplicarlo." : "Borrado: usa la aplicacion original.";
-	});
-	idInput.addEventListener("keydown", (e) => e.stopPropagation());
-	box.appendChild(idInput);
-	box.appendChild(idMsg);
-	box.appendChild(group("Depuracion"));
+	box.appendChild(group("Diagnóstico"));
 	const dump = el("button", "hx-btn ghost", "Copiar estructura de la UI");
 	dump.style.width = "100%";
 	dump.addEventListener("click", async () => {
@@ -499,7 +734,7 @@ const buildSettings = async (): Promise<HTMLElement> => {
 	});
 	box.appendChild(dump);
 	box.appendChild(el("p", "hx-sub", "Copia un resumen de las clases y botones que hay en pantalla (sin chat ni datos tuyos). Abri la pantalla que quieras ajustar y tocalo.")).style.marginTop = "8px";
-	box.appendChild(el("p", "hx-sub", "Atajos: F8 lineas finas · F9 mostrar/ocultar esta barra"));
+	box.appendChild(el("p", "hx-sub", "Atajos: F8 lineas finas · F9 mostrar u ocultar el panel"));
 	return box;
 };
 
@@ -571,7 +806,7 @@ const buildExtras = async (): Promise<HTMLElement> => {
 	const x = getExtras();
 	const box = el("div");
 	box.appendChild(el("h2", "", "Chat, equipo y salas"));
-	box.appendChild(el("p", "hx-sub", "Comodidades del cliente. No cambian nada del juego en si."));
+	box.appendChild(el("p", "hx-sub", "Funciones propias de TL App. Los complementos tienen su panel aparte."));
 
 	box.appendChild(group("Chat"));
 	box.appendChild(switchRow("Resaltar si me mencionan", "Marca el mensaje que incluye tu nombre", x.chatHighlight, (on) => {
@@ -601,6 +836,20 @@ const buildExtras = async (): Promise<HTMLElement> => {
 	box.appendChild(switchRow("Camara lenta falsa", "Vineta oscura y un zoom corto despues del gol (solo visual)", fx.cinematic, (on) => { updateFx({ cinematic: on }); SAVE("fx_cinematic", on); }));
 	box.appendChild(switchRow("Borde en los ultimos segundos", "El borde de la pantalla late en rojo al final del partido", fx.edge, (on) => { updateFx({ edge: on }); SAVE("fx_edge", on); }));
 	box.appendChild(switchRow("Entrada animada", "Pantalla de bienvenida con el escudo al abrir la app", fx.splash, (on) => { updateFx({ splash: on }); SAVE("fx_splash", on); }));
+	box.appendChild(switchRow("Sonido al iniciar", "Acorde breve y suave al abrir TL App", fx.splashSound, (on) => {
+		updateFx({ splashSound: on });
+		SAVE("fx_splash_sound", on);
+	}));
+	const startupSoundDemo = el("button", "hx-btn ghost", "Probar sonido de inicio");
+	startupSoundDemo.style.width = "100%";
+	startupSoundDemo.addEventListener("click", () => playStartupSound(true));
+	box.appendChild(startupSoundDemo);
+	box.appendChild(colorRow("Color de gol rojo", fx.redColor,
+		(hex) => updateFx({ redColor: hex }),
+		(hex) => SAVE("fx_red_color", hex), undefined, undefined, "Se usa en el banner y destello del equipo rojo."));
+	box.appendChild(colorRow("Color de gol azul", fx.blueColor,
+		(hex) => updateFx({ blueColor: hex }),
+		(hex) => SAVE("fx_blue_color", hex), undefined, undefined, "Se usa en el banner y destello del equipo azul."));
 	const demo = el("button", "hx-btn ghost", "Probar efecto de gol");
 	demo.style.width = "100%";
 	demo.addEventListener("click", () => showGoal("red", 1, 0));
@@ -658,6 +907,38 @@ const buildExtras = async (): Promise<HTMLElement> => {
 	});
 	box.appendChild(rejoin);
 	box.appendChild(last);
+	const favorites = getFavoriteRooms();
+	box.appendChild(group("Acceso rapido a favoritas"));
+	if (favorites.length) {
+		const favoriteButtons = el("div", "hx-presets");
+		favorites.slice(0, 8).forEach((name) => {
+			const button = el("button", "hx-btn ghost hx-preset", name);
+			button.title = `Entrar a ${name}`;
+			button.addEventListener("click", () => showToast(joinRoomByName(name)));
+			favoriteButtons.appendChild(button);
+		});
+		box.appendChild(favoriteButtons);
+		if (favorites.length > 8) box.appendChild(el("p", "hx-hint", `Se muestran 8 de ${favorites.length} favoritas.`));
+	} else {
+		box.appendChild(el("p", "hx-sub", "Aun no hay salas favoritas. Marca una desde la lista de salas de HaxBall."));
+	}
+
+	box.appendChild(group("Complementos"));
+	box.appendChild(el("p", "hx-sub", "Las opciones de busqueda, autoentrada, mute y atajos pertenecen a All-in-one; no se duplican aqui."));
+	const addonOptions = el("button", "hx-btn ghost", "Abrir opciones de Add-on");
+	addonOptions.style.width = "100%";
+	addonOptions.addEventListener("click", () => {
+		try {
+			const frame = document.getElementsByClassName("gameframe")[0] as HTMLIFrameElement | undefined;
+			const button = frame?.contentDocument?.querySelector('[data-hook="add-on"]') as HTMLElement | null;
+			if (button) button.click();
+			else showToast("Usa el boton Add-on de la barra superior para abrir sus opciones.");
+		} catch (error) {
+			console.error("[panel] no se pudo abrir la configuracion de Add-on", error);
+			showToast("No se pudo abrir Add-on Settings");
+		}
+	});
+	box.appendChild(addonOptions);
 	return box;
 };
 
@@ -734,8 +1015,17 @@ const applyOpen = (): void => {
 	if (!open) closeDrawer();
 };
 
+const updatePanelTop = (): void => {
+	if (!root) return;
+	const header = document.querySelector(".header.tl-header, .header") as HTMLElement | null;
+	const bottom = header?.getBoundingClientRect().bottom ?? 0;
+	const offset = bottom > 0 ? Math.ceil(bottom + 6) : 0;
+	root.style.setProperty("--hx-panel-top", `${offset}px`);
+};
+
 const updateVisibility = (): void => {
 	if (!root) return;
+	updatePanelTop();
 	const inGame = isInGame();
 	if (inGame !== lastInGame) { // al entrar / salir de una sala se empieza de cero
 		lastInGame = inGame;
@@ -841,6 +1131,8 @@ function buildLogoRow(): HTMLDivElement {
 				const url = await fileToLogo(file, 128);
 				SAVE("club_logo", url);
 				setLogo(url);
+				updateLinesLive({ wmLogo: url });
+				updateFx({ logo: url });
 				refreshPreview();
 			} catch (error) {
 				console.error("[panel] escudo", error);
@@ -853,6 +1145,8 @@ function buildLogoRow(): HTMLDivElement {
 	clear.addEventListener("click", () => {
 		SAVE("club_logo", "");
 		setLogo(BRAND_LOGO);
+		updateLinesLive({ wmLogo: "" });
+		updateFx({ logo: "" });
 		refreshPreview();
 	});
 
@@ -948,7 +1242,14 @@ export const startPanel = async (): Promise<void> => {
 	root.appendChild(drawer);
 	document.body.appendChild(root);
 
+	const header = document.querySelector(".header.tl-header, .header");
+	if (header) {
+		new MutationObserver(updatePanelTop).observe(header, { attributes: true, attributeFilter: ["class", "style"] });
+		header.addEventListener("transitionend", updatePanelTop);
+	}
+	window.addEventListener("resize", updatePanelTop);
+	updatePanelTop();
 	(window as any).__haxTogglePanel = togglePanel;
 	updateVisibility();
-	setInterval(updateVisibility, 500);
+	setInterval(updateVisibility, 1000);
 };

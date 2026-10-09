@@ -41,18 +41,6 @@ const applyLowLatencyVisuals = async (
 			filter: none !important;
 		}
 
-		/* Capa GPU dedicada y optimización de renderizado para el canvas del juego */
-		canvas {
-			image-rendering: -webkit-optimize-contrast !important;
-			transform: translateZ(0) !important;
-			will-change: transform !important;
-			backface-visibility: hidden !important;
-		}
-
-		/* Contención de layout y repintado para evitar relayout global en cada frame */
-		.game-view {
-			contain: layout paint !important;
-		}
 	`;
 
 	doc.head.appendChild(style);
