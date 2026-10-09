@@ -4,7 +4,7 @@ function beep() {
     snd.play();
 }
 
-// autoJoin by xenon
+// Automatic room joining
 function createButton() {
 	var el = document.documentElement.getElementsByClassName("gameframe")[0];
 	var refreshButton = el.contentWindow.document.querySelector('button[data-hook="refresh"]');
@@ -25,7 +25,7 @@ function createButton() {
 	insertPos.parentNode.insertBefore(autoJoinButton, insertPos.nextSibling);
 }
 
-// autoJoin by xenon
+// Automatic room joining
 function check() {
 	var el = document.documentElement.getElementsByClassName("gameframe")[0];
 	var autoJoinButton = el.contentWindow.document.querySelector('button[data-hook="autoJoin"]');

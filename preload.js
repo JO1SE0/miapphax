@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   setAppPreference: (key, value) => ipcRenderer.invoke('set-app-preference', key, value),
+  setAppPreferences: (updates) => ipcRenderer.invoke('set-app-preferences', updates),
   getAppPreferences: () => ipcRenderer.invoke('get-app-preferences'),
   restartApp: () => ipcRenderer.send('restart-app'),
   notifyReadyToShow: () => ipcRenderer.send('ready-to-show'),

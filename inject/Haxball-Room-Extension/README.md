@@ -36,7 +36,9 @@ For use on HTML5 version of [http://haxball.com](http://haxball.com). This exten
 
 Haxball All-in-one Tool adds a few time-saving features to the existing HTML5 version of the game. It works with all rooms hosted on the HTML5 game!
 
-**✓ Room Search (original idea by Raamyy)**: quickly filter rooms by their room names (or partial room names) using the search bar above the room list. Also, if you would like to have more than 1 search term, simply separate it with a +. Partial room name match will work even with +.
+**✓ Room Search**: quickly filter rooms by their room names (or partial room names) using the search bar above the room list. Also, if you would like to have more than 1 search term, simply separate it with a +. Partial room name match will work even with +.
+
+This fork is maintained by Miclo and is based on the HaxBall All-in-one Tool. Original upstream contributors: Xenon, Raamyy, Pacific, and Mirage.
 
 | ![](/screenshots/ss2.png) |
 | :--: |
@@ -58,7 +60,7 @@ Haxball All-in-one Tool adds a few time-saving features to the existing HTML5 ve
 
 **✓ (Beta) Notification when you're moved into a team**: forgot to check the Haxball tab? You'll get a desktop notification when you are moved into a team. Be aware that this is still a beta function!
 
-**✓ Transparent chat**: want to see chat but also see more of the field? You now have it :D Credits to P a c i f i c for helping with the implementation :)
+**✓ Transparent chat**: want to see chat but also see more of the field? You now have it :D
 
 **✓ Hide chat toggle**: if you really want to focus on the game without the transparent chat log, now you have it! Press the hide chat toggle on the score/time bar (or using the ~ key or " key on the top left of your keyboard), and it'll show/hide your chat :) But if you still need to chat quickly, just press "Tab" and chat normally
 

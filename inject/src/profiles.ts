@@ -19,11 +19,12 @@ export interface Profile {
     player_name: string | null;
 }
 
-export const loadProfileToLocalStorage = (profileId: string): void => {
-    window.electronAPI.getAppPreferences()
+export const loadProfileToLocalStorage = (profileId: string): Promise<void> => {
+    return window.electronAPI.getAppPreferences()
         .then((prefs) => {
             const profiles: Array<Profile> = prefs["profiles"];
             const profile = profiles.find(p => p.id === profileId) || profiles[0];
+            if (!profile) throw new Error(`Profile not found: ${profileId}`);
 			localStorage.setItem("current_profile", profile.id)
 
             // keys of profile that have a corresponding entry in localstorage
@@ -50,12 +51,18 @@ export const loadProfileToLocalStorage = (profileId: string): void => {
         })
         .catch(error => {
             console.error('Failed to load settings:', error);
+            throw error;
         });
 }
 
-export const switchProfile = (newProfileId: string): void => {
+export const switchProfile = async (newProfileId: string): Promise<void> => {
     console.log(`Switching to profile: ${newProfileId}`);
-    loadProfileToLocalStorage(newProfileId);
+    try {
+        await loadProfileToLocalStorage(newProfileId);
+    } catch (error) {
+        customAlert("Profile switch failed", "The selected profile could not be loaded. Check the app logs and try again.", []);
+        return;
+    }
 
     // reset the session flag so startup logic knows it's a new profile
     sessionStorage.removeItem('profileInitialized');

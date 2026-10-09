@@ -67,14 +67,14 @@ function addonSettingsPopup(currentView) {
 	addonSettings.appendChild(addonSection);
 	addonSettings.appendChild(copyright());
 	addonSection.className = 'section selected';
-	addonSection.appendChild(configElem('haxSearchConfig',true,'Search bar (Raamyy)'));
+	addonSection.appendChild(configElem('haxSearchConfig',true,'Search bar'));
 	addonSection.appendChild(configElem('haxAutoJoinConfig',true,'Room AutoJoin'));
 	addonSection.appendChild(configElem('haxKickBanConfig',false,'Room Kick/Ban shortcuts (double click)'));
 	// addonSection.appendChild(configElem('haxHideNavConfig',false,'Hide NavBar by default'));
 	addonSection.appendChild(configElem('haxMuteConfig',true,'Local mute'));
 	addonSection.appendChild(configElem('haxNotifConfig',false,'Game notifications'));
-	// addonSection.appendChild(configElem('haxTransChatConfig',false,'Transparent chat (Pacific)'));
-	// addonSection.appendChild(configElem('haxChatTranslation',false,'Chat translation (Raamyy)'));
+	// addonSection.appendChild(configElem('haxTransChatConfig',false,'Transparent chat'));
+	// addonSection.appendChild(configElem('haxChatTranslation',false,'Chat translation'));
 	// addonSection.appendChild(sliderDiv);
 	addonSection.appendChild(configElem('haxViewModeConfig',false,'View-mode hotkeys'));
 	addonSection.appendChild(configElem('haxRecordHotkey',false,'Record hotkey R'));
@@ -100,6 +100,7 @@ function addonSettingsPopup(currentView) {
 
 		var okButton = el.contentWindow.document.querySelector('[data-hook="ok"]');
 		var buttonDiv = document.createElement('div');
+		buttonDiv.className = 'nickname-actions';
 		buttonDiv.align = 'center';
 		
 		var dividerDiv = document.createElement('div');

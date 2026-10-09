@@ -26,7 +26,8 @@ export type ThemeConfig = {
 	cards: boolean; // rediseño de tarjetas (lista de salas, host, dialogos)
 	cardStyle: CardStyle; // cristal / solido / plano
 	density: number; // 0.6 compacto ... 1.6 amplio
-	lowGpu: boolean; // sin blur (viene del modo baja latencia)
+	lowGpu: boolean; // modo FPS maximo: sin blur ni animaciones
+	noBlur: boolean; // solo sin desenfoque (el resto se mantiene)
 };
 
 // Tema del club "Toda la Lecce": colores del escudo (azul marino, amarillo, rojo, dorado)
@@ -42,11 +43,12 @@ export const DEFAULT_THEME: ThemeConfig = {
 	accent2: CLUB_THEME.accent2,
 	glow: "",
 	glowStrength: 0.35,
-	radius: 8,
+	radius: 12,
 	cards: true,
 	cardStyle: "glass",
 	density: 1,
 	lowGpu: false,
+	noBlur: false,
 };
 
 export const PRESETS: { name: string; hex: string }[] = [
@@ -57,6 +59,9 @@ export const PRESETS: { name: string; hex: string }[] = [
 	{ name: "Orange", hex: "#f97316" },
 	{ name: "Green", hex: "#22c55e" },
 	{ name: "Cyan", hex: "#06b6d4" },
+	{ name: "Gold", hex: "#d0b878" },
+	{ name: "Turquoise", hex: "#14b8a6" },
+	{ name: "Indigo", hex: "#6366f1" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -246,6 +251,7 @@ input[type=range] { accent-color: var(--hx-accent); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--hx-accent); }
 ::selection { background: var(--hx-accent-soft); }
+html[data-hx-stage="game"]::before { display: none !important; }
 ${glowCss}
 `;
 };
@@ -302,6 +308,13 @@ const rewriteSheet = (sheet: CSSStyleSheet, accent: Hsl | null): void => {
 
 let current: ThemeConfig = { ...DEFAULT_THEME };
 let version = 1;
+let refreshTimer: number | undefined;
+let inGameStage = false;
+
+const scheduleThemeRefresh = (): void => {
+	if (refreshTimer !== undefined) window.clearInterval(refreshTimer);
+	refreshTimer = window.setInterval(applyEverywhere, current.lowGpu || inGameStage ? 5000 : 1500);
+};
 
 export const getThemeConfig = (): ThemeConfig => ({ ...current });
 
@@ -339,6 +352,8 @@ export const applyThemeToDocument = (doc: Document | null | undefined): void => 
 				cardStyle: current.cardStyle,
 				density: current.density,
 				lowGpu: current.lowGpu,
+				noBlur: current.noBlur,
+				accent2: current.accent2,
 			});
 		}
 	}
@@ -363,15 +378,27 @@ const getGameDocument = (): Document | null => {
 };
 
 const applyEverywhere = (): void => {
+	const gameDoc = getGameDocument();
+	const inGame = !!gameDoc?.querySelector(".game-view");
+	if (inGame !== inGameStage) {
+		inGameStage = inGame;
+		scheduleThemeRefresh();
+	}
+	document.documentElement.dataset.hxStage = inGame ? "game" : "menu";
+	if (gameDoc?.documentElement) {
+		gameDoc.documentElement.dataset.hxStage = inGame ? "game" : "menu";
+	}
 	try { applyThemeToDocument(document); } catch (e) { console.error("[theme] pagina", e); }
-	try { applyThemeToDocument(getGameDocument()); } catch (e) { console.error("[theme] juego", e); }
+	try { applyThemeToDocument(gameDoc); } catch (e) { console.error("[theme] juego", e); }
 };
 
 // Cambia el tema en vivo (los sliders / selector de color lo llaman).
 export const updateThemeLive = (partial: Partial<ThemeConfig>): void => {
+	const wasLowGpu = current.lowGpu;
 	current = { ...current, ...partial };
 	version++;
 	applyEverywhere();
+	if (wasLowGpu !== current.lowGpu) scheduleThemeRefresh();
 };
 
 // Color ya mapeado para los widgets del cliente que usan estilos inline
@@ -402,7 +429,8 @@ export const startThemeWatcher = async (): Promise<void> => {
 			density: Number.isFinite(Number(prefs?.theme_density))
 				? clamp(Number(prefs.theme_density), 0.5, 1.8)
 				: DEFAULT_THEME.density,
-			lowGpu: prefs?.low_latency === true,
+			lowGpu: prefs?.fps_mode === true,
+			noBlur: prefs?.ui_blur === false,
 		};
 		// Primera vez con el tema del club: quien no habia elegido un color propio
 		// (sin acento guardado, el azul de antes o el giallorossi anterior) pasa a los colores del escudo.
@@ -424,6 +452,6 @@ export const startThemeWatcher = async (): Promise<void> => {
 	}
 	version++;
 	applyEverywhere();
-	// el iframe del juego se recrea al entrar a cada sala y aparecen hojas nuevas
-	setInterval(applyEverywhere, 1000);
+	// El iframe del juego agrega hojas al entrar a una sala; en modo eficiente se revisa menos.
+	scheduleThemeRefresh();
 };

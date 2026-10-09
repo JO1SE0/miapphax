@@ -34,6 +34,9 @@ const prepareCrest = (src: string): void => {
 
 const STYLE_ID = "hax-bg-style";
 const ATTR = "data-hx-bg";
+let watcher: number | undefined;
+let performanceMode = false;
+let inGameStage = false;
 
 const isGreen = (css: string): boolean => {
 	const m = css.match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)(?:[ ,/]+([\d.]+))?/i);
@@ -109,19 +112,46 @@ const apply = (doc: Document | null | undefined, on: boolean, from: string, to: 
 	}
 };
 
+const scheduleWatcher = (): void => {
+	if (watcher !== undefined) window.clearInterval(watcher);
+	watcher = window.setInterval(refreshBackground, performanceMode || inGameStage ? 5000 : 1500);
+};
+
+export const setBackgroundPerformanceMode = (enabled: boolean): void => {
+	if (performanceMode === enabled) return;
+	performanceMode = enabled;
+	refreshBackground();
+	scheduleWatcher();
+};
+
 export const refreshBackground = (): void => {
 	const cfg = getLinesConfig();
+	const frame = document.getElementsByClassName("gameframe")[0] as HTMLIFrameElement | undefined;
+	let gameDoc: Document | null = null;
+	try {
+		gameDoc = frame?.contentDocument ?? null;
+	} catch {
+		gameDoc = null;
+	}
+	const playing = !!gameDoc?.querySelector(".game-view");
+	if (playing !== inGameStage) {
+		inGameStage = playing;
+		scheduleWatcher();
+	}
+	if (performanceMode !== cfg.lowPerformance) {
+		performanceMode = cfg.lowPerformance;
+		scheduleWatcher();
+	}
 	prepareCrest(cfg.wmLogo || BRAND_LOGO);
 	const crest = cfg.bgCrest ? crestUrl : "";
-	apply(document, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim, crest);
-	try {
-		const frame = document.getElementsByClassName("gameframe")[0] as HTMLIFrameElement | undefined;
-		apply(frame?.contentDocument, cfg.bgEnabled, cfg.bgFrom, cfg.bgTo, cfg.bgAnim, crest);
-	} catch {
-		/* sin acceso */
-	}
+	const animate = cfg.bgAnim && !cfg.lowPerformance && !performanceMode;
+	const backgroundEnabled = cfg.bgEnabled && !cfg.lowPerformance;
+	apply(document, backgroundEnabled, cfg.bgFrom, cfg.bgTo, animate, crest);
+	apply(gameDoc, backgroundEnabled, cfg.bgFrom, cfg.bgTo, animate, crest);
 };
 
 export const startBackgroundWatcher = (): void => {
-	setInterval(refreshBackground, 800);
+	performanceMode = getLinesConfig().lowPerformance;
+	refreshBackground();
+	scheduleWatcher();
 };

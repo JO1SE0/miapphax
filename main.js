@@ -146,8 +146,13 @@ app.commandLine.appendSwitch('force-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
 app.commandLine.appendSwitch('enable-accelerated-2d-canvas');
-app.commandLine.appendSwitch('disable-software-rasterizer');
-app.commandLine.appendSwitch('disable-gpu-watchdog');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Flags agresivos: pueden dejar la ventana en blanco o con glitches en algunas PCs/drivers,
+// por eso solo se activan desde Rendimiento > Experimental > "Flags agresivos de GPU".
+if (preferences.risky_flags === true) {
+  app.commandLine.appendSwitch('disable-software-rasterizer');
+  app.commandLine.appendSwitch('disable-gpu-watchdog');
+}
 
 // Backend Direct3D 11 nativo de Windows (menor latencia de render e input)
 if (process.platform === 'win32') {
@@ -157,15 +162,15 @@ if (process.platform === 'win32') {
 // Rasterizado de Canvas fuera de proceso (Out-of-Process) y Skia Renderer
 app.commandLine.appendSwitch(
   'enable-features',
-  'CanvasOopRasterization,UseSkiaRenderer,RawDraw'
+  preferences.risky_flags === true ? 'CanvasOopRasterization,UseSkiaRenderer,RawDraw' : 'CanvasOopRasterization'
 );
 
 // --- Anti-Throttling e Input Latency ---
 // Desactivar oclusión nativa de Windows (evita tirones y lag spikes en Win 10/11)
-// y desactivar mDNS en WebRTC (acelera la conexión directa P2P a las salas)
+// (no se toca mDNS de WebRTC: desactivarlo expone tu IP local a otros jugadores)
 app.commandLine.appendSwitch(
   'disable-features',
-  'CalculateNativeWinOcclusion,IntensiveWakeUpThrottling,WebRtcHideLocalIpsWithMdns'
+  'CalculateNativeWinOcclusion,IntensiveWakeUpThrottling'
 );
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
@@ -181,7 +186,6 @@ for (const flag of [
 }
 
 // Timers de alta resolución y respuesta de eventos
-app.commandLine.appendSwitch('enable-high-resolution-time');
 app.commandLine.appendSwitch('disable-ipc-flooding-protection');
 
 // Rendimiento en tiempo real de WebRTC (motor multijugador de HaxBall)
@@ -206,6 +210,7 @@ if (preferences.in_process_gpu) {
 
 // Prioridad alta de CPU para la app y sus procesos (ayuda cuando la PC esta cargada)
 const boostPriority = () => {
+  if (preferences.high_priority === false) return;
   const os = require('os');
   const high = os.constants.priority.PRIORITY_HIGH;
   const pids = new Set([process.pid]);
@@ -366,6 +371,19 @@ ipcMain.handle('set-app-preference', async (event, key, value) => {
   // console.log('Received preference:', key, value);
   const prefs = loadAppPreferences();
   prefs[key] = value;
+  saveAppPreferences(prefs);
+});
+
+ipcMain.handle('set-app-preferences', async (event, updates) => {
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
+    throw new TypeError('Preference updates must be an object');
+  }
+  const entries = Object.entries(updates);
+  if (entries.some(([key, value]) => !/^[a-zA-Z0-9_]+$/.test(key) || !['string', 'number', 'boolean'].includes(typeof value))) {
+    throw new TypeError('Preference updates must contain valid keys and primitive values');
+  }
+  const prefs = loadAppPreferences();
+  for (const [key, value] of entries) prefs[key] = value;
   saveAppPreferences(prefs);
 });
 

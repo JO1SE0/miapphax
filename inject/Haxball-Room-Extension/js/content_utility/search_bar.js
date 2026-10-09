@@ -1,4 +1,4 @@
-// search bar by Raamyy and xenon
+// Room search bar maintained by miclo
 function createSearch(){
 	var gameframe = document.getElementsByClassName("gameframe")[0];
 	var dialog = gameframe.contentDocument.getElementsByClassName("dialog")[0];
@@ -17,7 +17,7 @@ function createSearch(){
 	var input = document.createElement('input'); 
 	input.type = "search"; 
 	input.id = "searchRoom";
-	input.placeholder = "Term1 Term2+Term3/RoomMax - Search bar by Raamyy and xenon";
+	input.placeholder = "Term1 Term2+Term3/RoomMax - Search bar";
 	input.autocomplete = "off";
 	input.style.width = "75%";
 	
@@ -66,7 +66,7 @@ function createSearch(){
 	newDivWrapper.appendChild(button);
 }
 
-// search bar by Raamyy and xenon
+// Filter rooms using search terms, player limits, and country
 function searchForRoom() {
 	var gameframe = document.getElementsByClassName("gameframe")[0];
 	var dialog = gameframe.contentDocument.getElementsByClassName("dialog")[0];
@@ -169,5 +169,3 @@ function selectedAnchorElement() {
 		searchForRoom();
 	});
 }
-
-

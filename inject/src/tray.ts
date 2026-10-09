@@ -12,7 +12,7 @@ let open = false;
 const CSS = `
 #${ROOT_ID} { position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 2147482500; font-family: Inter, "Segoe UI", system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
 #${ROOT_ID} > * { pointer-events: auto; }
-#${ROOT_ID} .tr-tab { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 5px 16px; border-radius: 999px; cursor: pointer; user-select: none;
+#${ROOT_ID} .tr-tab { display: flex; align-items: center; gap: 8px; margin-top: 13px; padding: 5px 16px; border-radius: 999px; cursor: pointer; user-select: none;
 	font: 600 12px Inter, "Segoe UI", sans-serif; letter-spacing: .04em; color: #eef2fa; background: linear-gradient(180deg, #1b3158, #0e1a31);
 	border: 1px solid rgba(208,184,120,.45); box-shadow: 0 4px 16px rgba(0,0,0,.4); transition: opacity .2s ease, transform .2s ease; }
 #${ROOT_ID} .tr-tab:hover { border-color: #d0b878; box-shadow: 0 4px 20px rgba(208,184,120,.25); }

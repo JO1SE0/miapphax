@@ -1,4 +1,4 @@
-// transparent chat by P a c i f i c and xenon
+// Transparent chat add-on
 function chatFormat(btm, stats, ipt, posn) {
 	chrome.storage.local.get({'haxAlpha' : 10},
 	function (items) {

@@ -1,6 +1,6 @@
 # TL App by og
 
-Unofficial client for the browser game [HaxBall](https://www.haxball.com/play), built with [Electron](https://github.com/electron/electron) and shipping with the browser extension [HaxBall All-in-one Tool](https://github.com/xenonsb/Haxball-Room-Extension).
+Unofficial client for the browser game [HaxBall](https://www.haxball.com/play), built with [Electron](https://github.com/electron/electron) and shipping with the browser extension [HaxBall All-in-one Tool](https://github.com/JO1SE0/miapphax).
 
 The client works on **Windows** (64bit/32bit/ARM), **macOS** (Apple Silicon/Intel), and **Linux** (64bit).
 
@@ -8,7 +8,7 @@ We are also on **[Discord](https://discord.gg/zDzYamtcfX)**!
 
 ✨ **Features at a glance:**
 
-* Comes with the [All-in-one Tool](https://github.com/xenonsb/Haxball-Room-Extension/)
+* Comes with the [All-in-one Tool](https://github.com/JO1SE0/miapphax)
 * No ads
 * Unlockable FPS
 * User profiles
@@ -16,6 +16,9 @@ We are also on **[Discord](https://discord.gg/zDzYamtcfX)**!
 * Chat shortcuts
 * Automatic updates
 * Glass UI (if enabled)
+* Competitive, classic, and festive appearance presets, plus a saved custom preset
+* Custom goal celebration colors and effects
+* Compact host-room layout and a low-effects performance mode
 * Easy Auth management
 
 ## How to install and run
